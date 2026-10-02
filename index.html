@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>태그 카메라</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Nanum+Pen+Script&family=Nanum+Myeongjo:wght@800&family=Noto+Sans+KR:wght@900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gaegu:wght@700&family=Nanum+Pen+Script&family=Nanum+Myeongjo:wght@800&family=Noto+Sans+KR:wght@900&display=swap">
 <style>
 /* Layout: one narrow column. Home → one edit screen (photo with text, name, folder, tags, save). Crop is a separate panel. */
 :root{
@@ -47,7 +47,8 @@ h2{font-size:13px;margin:0;color:var(--muted);font-weight:500;letter-spacing:.06
 .settings{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 /* photo editor */
 .photo{position:relative;border-radius:10px;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none}
-.photo canvas{display:block;width:100%;height:auto}
+.photo{display:flex;justify-content:center}
+.photo canvas{display:block;max-width:100%;max-height:46vh;width:auto;height:auto}
 .photo .tip{position:absolute;left:8px;top:8px;font-size:12px;color:#fff;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px;pointer-events:none}
 .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 .stage canvas{display:block;width:100%;height:auto}
@@ -96,6 +97,13 @@ textarea{resize:none}
 .toggle{display:flex;gap:8px;align-items:center;font-size:14px}
 .toggle input{width:18px;height:18px;accent-color:var(--accent)}
 .group{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.cam{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:3/4;max-height:68vh;margin:0 auto;width:100%}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.shoot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.shutter{width:74px;height:74px;border-radius:50%;border:5px solid var(--accent);background:var(--surface);box-shadow:inset 0 0 0 4px var(--bg)}
+.shutter:active{background:var(--accent)}
+.side{min-width:92px}
+.camerr{color:#fff;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;font-size:14px}
 .recent{display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .recent div{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}
 .recent b{font:500 13px var(--f-mono);word-break:break-all}
@@ -127,59 +135,46 @@ textarea{resize:none}
     <div class="row"><button class="btn" id="exportLists" type="button">내보내기</button><label class="btn" for="importLists" style="position:relative;overflow:hidden">불러오기<input type="file" id="importLists" accept="application/json,.json" style="position:absolute;inset:0;opacity:0"></label></div>
   </section>
 
-  <!-- home -->
+  <!-- home: live camera -->
   <section id="sHome">
-    <div class="big">
-      <label class="primary" for="cam">
-        <svg class="cam-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>
-        사진 찍기<small>카메라 열기</small>
-        <input id="cam" type="file" accept="image/*" capture="environment">
-      </label>
-      <label for="pick">
-        <svg class="cam-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>
-        갤러리에서<small>이미 찍은 사진</small>
-        <input id="pick" type="file" accept="image/*">
-      </label>
+    <div class="cam"><video id="video" playsinline muted autoplay></video><div class="camerr" id="camErr" hidden></div></div>
+    <div class="shoot">
+      <label class="btn side" for="pick" style="position:relative;overflow:hidden;text-align:center">갤러리<input id="pick" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0"></label>
+      <button class="shutter" id="shutter" type="button" aria-label="촬영"></button>
+      <label class="btn side" for="cam" style="position:relative;overflow:hidden;text-align:center">기본 카메라<input id="cam" type="file" accept="image/*" capture="environment" style="position:absolute;inset:0;opacity:0"></label>
     </div>
-    <p class="hint">찍으면 바로 편집 화면으로 갑니다. 사진 아래쪽에 날짜·시간이 자동으로 들어갑니다.</p>
     <h2>최근 저장</h2>
-    <div class="recent" id="recent"><p class="empty">아직 저장한 사진이 없습니다. 위에서 첫 사진을 찍어 보세요.</p></div>
+    <div class="recent" id="recent"><p class="empty">아직 저장한 사진이 없습니다.</p></div>
   </section>
 
   <!-- edit: everything on one screen -->
   <section id="sEdit" hidden>
-    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">글자를 끌어서 위치 이동</span></div>
+    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">사진을 눌러 글자 위치 이동</span></div>
     <div class="row">
       <button class="btn" id="toCrop" type="button">자르기·회전</button>
-      <button class="btn" id="centerText" type="button">글자 가운데로</button>
-      <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간 넣기</label>
+            <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간 넣기</label>
     </div>
 
     <div class="group">
-      <h2>사진 위 글자</h2>
-      <textarea id="ovText" rows="2" maxlength="60" placeholder="사진 가운데 크게 쓸 글자 (비우면 안 씀)"></textarea>
-      <div class="fonts" id="fonts"></div>
-      <div class="row" style="justify-content:space-between">
-        <div class="colors" id="colors"></div>
-      </div>
-      <div class="sizer"><span>크기</span><input type="range" id="ovSize" min="4" max="30" value="12"><span id="ovSizeVal">12</span></div>
+      <div class="sub"><h2>폴더</h2><button class="link" id="editFolders" type="button">편집</button></div>
+      <div class="chips" id="folders"></div>
+      <div class="addrow"><input type="text" id="newFolder" placeholder="새 폴더 이름" maxlength="30"><button class="btn" id="addFolder" type="button">+ 새 폴더</button></div>
+      <label class="toggle" for="prefix"><input type="checkbox" id="prefix" checked> 파일명 앞에 폴더명 붙이기</label>
     </div>
 
     <div class="group">
-      <div class="sub"><h2>이름 (날짜_시간_선택지)</h2><button class="link" id="editLabels">편집</button></div>
+      <div class="sub"><h2>이름 (날짜_시간_선택지)</h2><button class="link" id="editLabels" type="button">편집</button></div>
       <div class="ai-state" id="aiState"></div>
       <div class="chips" id="labels"></div>
       <div class="addrow"><input type="text" id="newLabel" placeholder="새 선택지 추가" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
     </div>
 
     <div class="group">
-      <div class="sub"><h2>폴더</h2><button class="link" id="editFolders">편집</button></div>
-      <div class="chips" id="folders"></div>
-      <div class="addrow"><input type="text" id="newFolder" placeholder="새 폴더 이름" maxlength="30"><button class="btn" id="addFolder" type="button">+ 새 폴더</button></div>
-      <div class="sub"><h2>태그 (여러 개)</h2><button class="link" id="editTags">편집</button></div>
-      <div class="chips" id="tags"></div>
-      <div class="addrow"><input type="text" id="newTag" placeholder="새 태그" maxlength="30"><button class="btn" id="addTag" type="button">+ 새 태그</button></div>
-      <label class="toggle" for="prefix"><input type="checkbox" id="prefix" checked> 파일명 앞에 폴더명 붙이기</label>
+      <h2>사진 위 글자 (선택)</h2>
+      <textarea id="ovText" rows="2" maxlength="60" placeholder="추가로 쓸 글자 (비우면 안 씀)"></textarea>
+      <div class="fonts" id="fonts"></div>
+      <div class="colors" id="colors"></div>
+      <div class="sizer"><span>크기</span><input type="range" id="ovSize" min="4" max="30" value="12"><span id="ovSizeVal">12</span></div>
     </div>
 
     <div class="strip" id="strip"></div>
@@ -199,7 +194,7 @@ textarea{resize:none}
   </section>
 </div>
 
-<div class="bar"><div class="in">
+<div class="bar" id="bar"><div class="in">
   <button id="back" type="button" hidden>다시 찍기</button>
   <button id="next" class="go" type="button" hidden>저장</button>
 </div></div>
@@ -219,6 +214,7 @@ const FONTS = [
   { f:"Noto Sans KR", w:"900", n:"고딕" },
   { f:"Do Hyeon", w:"400", n:"도현" },
   { f:"Jua", w:"400", n:"주아" },
+  { f:"Gaegu", w:"700", n:"개구" },
   { f:"Nanum Myeongjo", w:"800", n:"명조" },
   { f:"Nanum Pen Script", w:"400", n:"손글씨" },
 ];
@@ -235,7 +231,7 @@ let shotTime = new Date();
 let sel = { label: "", folder: "", tags: new Set() };
 let ai = { labels: [], tags: [], pick: [], status: "" };
 const edit = { labels:false, folders:false, tags:false };
-let ov = { text:"", x:.5, y:.5 };
+let ov = { text:"", x:.5, y:.78 };
 
 /* ---------- persistence (this phone only) ---------- */
 function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); } }catch(e){} }
@@ -269,7 +265,9 @@ function round2h(d){
   return x;
 }
 const WD = ["일","월","화","수","목","금","토"];
-function stampText(d){ return d.getFullYear()+"."+pad(d.getMonth()+1)+"."+pad(d.getDate())+" ("+WD[d.getDay()]+") "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function round20(d){ const x = new Date(d.getTime()); const m = Math.round((x.getMinutes()+x.getSeconds()/60)/20)*20; x.setSeconds(0,0); x.setMinutes(0); x.setTime(x.getTime()+m*60000); return x; }
+function stampLines(d0){ const d = round20(d0); const h = d.getHours(), ap = h < 12 ? "오전" : "오후", h12 = h%12 === 0 ? 12 : h%12;
+  return [ (d.getMonth()+1)+"월 "+d.getDate()+"일 ("+WD[d.getDay()]+")", ap+" "+h12+":"+pad(d.getMinutes()) ]; }
 const clean = s => String(s||"").trim().replace(/[\\/:*?"<>|\s]+/g,"-").replace(/^-+|-+$/g,"");
 function fileName(){
   const r = round2h(shotTime);
@@ -285,11 +283,14 @@ function show(name){
   $("sHome").hidden = name !== "home";
   $("sEdit").hidden = name !== "edit";
   $("sCrop").hidden = name !== "crop";
+  $("bar").hidden = name === "home";
   $("back").hidden = name === "home";
   $("next").hidden = name === "home";
   $("back").textContent = name === "crop" ? "취소" : "다시 찍기";
+  $("back").style.flex = "1";
   $("next").textContent = name === "crop" ? "자르기 적용" : "저장";
   $("next").disabled = false;
+  if(name === "home") startCam();
   if(name === "crop") requestAnimationFrame(layoutCrop);
   if(name === "edit"){ $("saveMsg").innerHTML = ""; requestAnimationFrame(drawView); }
   render();
@@ -298,31 +299,58 @@ function show(name){
 $("back").onclick = () => { if(screen === "crop") show("edit"); else show("home"); };
 $("next").onclick = () => { if(screen === "crop"){ applyCrop(); show("edit"); } else save(); };
 
+/* ---------- live camera ---------- */
+const video = $("video"); let stream = null, track = null;
+async function startCam(){
+  if(stream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ if(!navigator.mediaDevices) camErr("이 브라우저는 카메라 미리보기를 지원하지 않습니다. 아래 '기본 카메라'를 쓰세요."); return; }
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ideal:"environment"}, width:{ideal:4032}, height:{ideal:3024} } });
+    track = stream.getVideoTracks()[0]; video.srcObject = stream; $("camErr").hidden = true;
+    try{ await video.play(); }catch(e){}
+  }catch(e){ stream = null; camErr("카메라를 열 수 없습니다. 크롬 주소창 왼쪽 아이콘 → 권한에서 카메라를 허용하거나, 아래 '기본 카메라'를 쓰세요."); }
+}
+function camErr(t){ $("camErr").textContent = t; $("camErr").hidden = false; }
+function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; track = null; video.srcObject = null; } }
+document.addEventListener("visibilitychange", () => { if(document.hidden) stopCam(); else if(screen === "home") startCam(); });
+$("shutter").onclick = async () => {
+  if(!track){ startCam(); return; }
+  shotTime = new Date();
+  let blob = null;
+  if("ImageCapture" in window){ try{ blob = await new ImageCapture(track).takePhoto(); }catch(e){ blob = null; } }
+  if(blob){ loadBlob(blob); return; }
+  const c = document.createElement("canvas"); c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext("2d").drawImage(video,0,0); startEdit(c);
+};
+function startEdit(canvas){
+  src = canvas;
+  sel = { label:"", folder: sel.folder || "", tags: new Set() }; ai = { labels:[], tags:[], pick:[], status:"" };
+  ov = { text:"", x:.5, y:.78 }; $("ovText").value = "";
+  stopCam(); show("edit"); analyze();
+}
+function loadBlob(b){
+  const url = URL.createObjectURL(b); const img = new Image();
+  img.onload = () => {
+    const MAX = 4000; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, MAX/Math.max(w,h));
+    const c = document.createElement("canvas"); c.width = Math.round(w*k); c.height = Math.round(h*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); startEdit(c);
+  };
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.src = url;
+}
+
 /* ---------- load photo ---------- */
 function onFile(e){
   const f = e.target.files && e.target.files[0]; e.target.value = "";
   if(!f) return;
   shotTime = f.lastModified ? new Date(f.lastModified) : new Date();
-  const url = URL.createObjectURL(f);
-  const img = new Image();
-  img.onload = () => {
-    const MAX = 4000; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, MAX/Math.max(w,h));
-    src = document.createElement("canvas"); src.width = Math.round(w*k); src.height = Math.round(h*k);
-    src.getContext("2d").drawImage(img,0,0,src.width,src.height);
-    URL.revokeObjectURL(url);
-    sel = { label:"", folder: sel.folder || "", tags: new Set() }; ai = { labels:[], tags:[], pick:[], status:"" };
-    ov = { text:"", x:.5, y:.5 }; $("ovText").value = "";
-    show("edit"); analyze();
-  };
-  img.onerror = () => { URL.revokeObjectURL(url); };
-  img.src = url;
+  loadBlob(f);
 }
 $("cam").onchange = onFile; $("pick").onchange = onFile;
 
 /* ---------- overlay drawing ---------- */
 const fontOf = () => FONTS.find(x => x.f === lists.style.font) || FONTS[0];
 function fontSpec(px){ const F = fontOf(); return F.w + " " + px + "px \"" + F.f + "\", \"Noto Sans KR\", sans-serif"; }
-async function ensureFont(){ try{ const F = fontOf(); await document.fonts.load(F.w + " 40px \"" + F.f + "\"", ov.text || "가A1"); await document.fonts.load("700 40px \"Noto Sans KR\"", "2026.10.02 (금) 20:47"); }catch(e){} }
+async function ensureFont(){ try{ const F = fontOf(); await document.fonts.load(F.w + " 40px \"" + F.f + "\"", ov.text || "가A1"); await document.fonts.load("400 40px \"Jua\"", "10월 2일 (금) 오후 8:40"); }catch(e){} }
 function drawOverlays(g, W, H){
   const base = Math.min(W, H);
   // big text
@@ -336,13 +364,13 @@ function drawOverlays(g, W, H){
     g.lineWidth = Math.max(2, px*0.14); g.strokeStyle = C.stroke; g.fillStyle = C.fill;
     lines.forEach((ln,i) => { g.strokeText(ln, ov.x*W, y0 + i*lh); g.fillText(ln, ov.x*W, y0 + i*lh); });
   }
-  // date stamp
+  // date stamp: 2 lines, exact center, cute font
   if($("stampOn").checked){
-    const px = Math.max(12, Math.round(base * 0.045));
-    g.font = "700 " + px + "px \"Noto Sans KR\", sans-serif"; g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.lineJoin = "round"; g.lineWidth = Math.max(2, px*0.18); g.strokeStyle = "rgba(0,0,0,.75)"; g.fillStyle = "#ffffff";
-    const s = stampText(shotTime), y = H - Math.round(H*0.04);
-    g.strokeText(s, W/2, y); g.fillText(s, W/2, y);
+    const px = Math.max(16, Math.round(base * 0.11));
+    g.font = "400 " + px + "px \"Jua\", \"Noto Sans KR\", sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.lineJoin = "round"; g.lineWidth = Math.max(3, px*0.16); g.strokeStyle = "rgba(0,0,0,.8)"; g.fillStyle = "#ffffff";
+    const L = stampLines(shotTime), lh = px*1.2, y0 = H/2 - lh/2;
+    L.forEach((t,i) => { g.strokeText(t, W/2, y0 + i*lh); g.fillText(t, W/2, y0 + i*lh); });
   }
 }
 const view = $("view");
@@ -361,7 +389,6 @@ function moveText(e){ const r = view.getBoundingClientRect(); ov.x = Math.min(.9
 view.addEventListener("pointerdown", e => { if(!ov.text.trim()) return; vdrag = true; view.setPointerCapture(e.pointerId); moveText(e); e.preventDefault(); });
 view.addEventListener("pointermove", e => { if(vdrag) moveText(e); });
 view.addEventListener("pointerup", () => vdrag = false); view.addEventListener("pointercancel", () => vdrag = false);
-$("centerText").onclick = () => { ov.x = .5; ov.y = .5; drawView(); };
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); };
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
@@ -482,7 +509,6 @@ JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"
     ai.labels = arr(r && r.labels).filter(x => !lists.labels.includes(x));
     ai.tags = arr(r && r.tags);
     if(!sel.label) sel.label = pick[0] || ai.labels[0] || "";
-    ai.tags.filter(t => lists.tags.includes(t)).forEach(t => sel.tags.add(t));
     ai.status = "done";
   }catch(e){ ai.status = (e && e.code === "badkey") ? "badkey" : "fail"; }
   render();
@@ -519,14 +545,7 @@ function render(){
     else sel.folder = sel.folder===f?"":f; render(); }})));
   $("editFolders").textContent = edit.folders ? "완료" : "편집";
 
-  const T = $("tags"); T.innerHTML = "";
-  lists.tags.forEach(t => T.appendChild(chip(t,{on:!edit.tags && sel.tags.has(t), removable:edit.tags, onClick:()=>{
-    if(edit.tags){ lists.tags = lists.tags.filter(x=>x!==t); sel.tags.delete(t); persist(); }
-    else sel.tags.has(t) ? sel.tags.delete(t) : sel.tags.add(t); render(); }})));
-  if(!edit.tags) ai.tags.filter(t=>!lists.tags.includes(t)).forEach(t => T.appendChild(chip("✦ "+t,{aiCls:true,on:sel.tags.has(t),onClick:()=>{ sel.tags.has(t)?sel.tags.delete(t):sel.tags.add(t); render(); }})));
-  $("editTags").textContent = edit.tags ? "완료" : "편집";
-
-  $("strip").textContent = fileName() + (sel.tags.size ? "  #" + [...sel.tags].join(" #") : "");
+  $("strip").textContent = fileName();
 
   const R = $("recent");
   if(lists.recent && lists.recent.length){
@@ -541,11 +560,9 @@ function addTo(key, input, after){
 }
 $("addLabel").onclick = () => addTo("labels","newLabel", v => sel.label = v);
 $("addFolder").onclick = () => addTo("folders","newFolder", v => sel.folder = v);
-$("addTag").onclick = () => addTo("tags","newTag", v => sel.tags.add(v));
-[["newLabel","addLabel"],["newFolder","addFolder"],["newTag","addTag"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
+[["newLabel","addLabel"],["newFolder","addFolder"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
 $("editLabels").onclick = () => { edit.labels = !edit.labels; render(); };
 $("editFolders").onclick = () => { edit.folders = !edit.folders; render(); };
-$("editTags").onclick = () => { edit.tags = !edit.tags; render(); };
 $("prefix").onchange = render;
 
 /* ---------- metadata (EXIF + XMP) ---------- */
