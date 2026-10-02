@@ -147,32 +147,37 @@ textarea{resize:none}
       <button class="shutter" id="shutter" type="button" aria-label="촬영"></button>
       <label class="btn side" for="cam" style="position:relative;overflow:hidden;text-align:center">기본 카메라<input id="cam" type="file" accept="image/*" capture="environment" style="position:absolute;inset:0;opacity:0"></label>
     </div>
-    <h2>최근 저장</h2>
-    <div class="recent" id="recent"><p class="empty">아직 저장한 사진이 없습니다.</p></div>
   </section>
 
   <!-- edit: everything on one screen -->
   <section id="sEdit" hidden>
-    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·글자를 끌어서 이동</span></div>
-    <div class="row">
-      <button class="btn" id="toCrop" type="button">자르기·회전</button>
-      <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간 넣기</label>
+    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
+    <div class="ai-state" id="aiState"></div>
+
+    <div class="group" style="border-top:0;padding-top:0">
+      <div class="sub"><h2>장소</h2><button class="link" id="editPlaces" type="button">편집</button></div>
+      <div class="chips" id="places"></div>
+      <div class="addrow"><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
     </div>
-    <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
-    <div class="sizer"><span>글자 크기</span><input type="range" id="ovSize" min="5" max="15" value="10"><span id="ovSizeVal">10</span></div>
 
     <div class="group">
-      <div class="sub"><h2>이름 (날짜_시간_선택지)</h2><button class="link" id="editLabels" type="button">편집</button></div>
-      <div class="ai-state" id="aiState"></div>
+      <h2>메모 (사진 위에 들어감)</h2>
+      <textarea id="ovText" rows="2" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점"></textarea>
+      <div class="chips" id="memos"></div>
+      <div class="sizer"><span>메모 크기</span><input type="range" id="ovSize" min="5" max="15" value="13"><span id="ovSizeVal">13</span></div>
+      <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
+      <div class="colors" id="colors"></div>
+      <div class="fonts" id="fonts"></div>
+      <div class="row">
+        <button class="btn" id="toCrop" type="button">자르기·회전</button>
+        <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간·장소 넣기</label>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="sub"><h2>파일 이름 선택지</h2><button class="link" id="editLabels" type="button">편집</button></div>
       <div class="chips" id="labels"></div>
       <div class="addrow"><input type="text" id="newLabel" placeholder="새 선택지 추가" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
-    </div>
-
-    <div class="group">
-      <h2>사진 위 글자 (선택)</h2>
-      <textarea id="ovText" rows="2" maxlength="60" placeholder="추가로 쓸 글자 (비우면 안 씀)"></textarea>
-      <div class="fonts" id="fonts"></div>
-      <div class="colors" id="colors"></div>
     </div>
 
     <div class="strip" id="strip"></div>
@@ -205,7 +210,8 @@ const DEFAULTS = {
   tags: ["업무","개인","세무","지출증빙","고객사"],
   labels: ["영수증","회의","서류","명함","식사","운동","메모","현장"],
   recent: [],
-  style: { font: "Black Han Sans", color: 0, size: 10, stamp: 10 }
+  style: { font: "Black Han Sans", color: 1, size: 13, stamp: 10, v: 2 },
+  places: ["집","회사","헬스장"]
 };
 const FONTS = [
   { f:"Black Han Sans", w:"400", n:"굵은 제목" },
@@ -226,14 +232,14 @@ let lists = JSON.parse(JSON.stringify(DEFAULTS));
 let screen = "home";
 let src = null;          // working image (after optional crop/rotate)
 let shotTime = new Date();
-let sel = { label: "", folder: "", tags: new Set() };
-let ai = { labels: [], tags: [], pick: [], status: "" };
-const edit = { labels:false, folders:false, tags:false };
-let ov = { text:"", x:.5, y:.4 };
+let sel = { label: "", folder: "", tags: new Set(), place: "" };
+let ai = { labels: [], tags: [], pick: [], status: "", place: "", newPlaces: [], memos: [] };
+const edit = { labels:false, folders:false, tags:false, places:false };
+let ov = { text:"", x:.5, y:.75, moved:false };
 let st = { x:.5, y:.625 };
 
 /* ---------- persistence (this phone only) ---------- */
-function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); } }catch(e){} }
+function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); if(lists.style.v !== 2){ lists.style.color = 1; lists.style.size = 13; lists.style.v = 2; } if(!Array.isArray(lists.places)) lists.places = DEFAULTS.places.slice(); } }catch(e){} }
 function persist(){ try{ localStorage.setItem("tagcam", JSON.stringify(lists)); }catch(e){} }
 lsLoad();
 const getKey = () => { try{ return localStorage.getItem("tagcam_key")||""; }catch(e){ return ""; } };
@@ -271,7 +277,8 @@ const clean = s => String(s||"").trim().replace(/[\\/:*?"<>|\s]+/g,"-").replace(
 function fileName(){
   const r = round2h(shotTime);
   const label = clean(sel.label);
-  let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (label ? "_" + label : "");
+  const memo = clean(ov.text).slice(0, 24), place = clean(sel.place);
+  let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (label ? "_" + label : "") + (place ? "_" + place : "") + (memo ? "_" + memo : "");
   return n + ".jpg";
 }
 
@@ -337,8 +344,8 @@ $("shutter").onclick = async () => {
 };
 function startEdit(canvas){
   src = canvas;
-  sel = { label:"", folder: sel.folder || "", tags: new Set() }; ai = { labels:[], tags:[], pick:[], status:"" };
-  ov = { text:"", x:.5, y:.4 }; st = { x:.5, y:.625 }; $("ovText").value = "";
+  sel = { label:"", folder:"", tags: new Set(), place:"" }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[] };
+  ov = { text:"", x:.5, y:.75, moved:false }; st = { x:.5, y:.625 }; $("ovText").value = "";
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -367,24 +374,28 @@ function fontSpec(px){ const F = fontOf(); return F.w + " " + px + "px \"" + F.f
 async function ensureFont(){ try{ const F = fontOf(); await document.fonts.load(F.w + " 40px \"" + F.f + "\"", ov.text || "가A1"); await document.fonts.load("400 40px \"Jua\"", "10월 2일 (금) 오후 8:40"); }catch(e){} }
 function drawOverlays(g, W, H){
   const base = Math.min(W, H);
-  // big text
-  const t = ov.text.trim();
-  if(t){
-    const C = COLORS[lists.style.color] || COLORS[0];
-    const px = Math.round(base * lists.style.size / 100);
-    g.font = fontSpec(px); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
-    const lines = t.split(/\n/); const lh = px * 1.15;
-    const y0 = ov.y*H - (lines.length-1)*lh/2;
-    g.lineWidth = Math.max(2, px*0.14); g.strokeStyle = C.stroke; g.fillStyle = C.fill;
-    lines.forEach((ln,i) => { g.strokeText(ln, ov.x*W, y0 + i*lh); g.fillText(ln, ov.x*W, y0 + i*lh); });
-  }
-  // date stamp: 2 lines, exact center, cute font
+  // date stamp block: date / time / place, cute font
+  let blockBottom = st.y*H;
   if($("stampOn").checked){
     const px = Math.max(14, Math.round(base * (lists.style.stamp||10) / 100));
     g.font = "400 " + px + "px \"Jua\", \"Noto Sans KR\", sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
     g.lineJoin = "round"; g.lineWidth = Math.max(3, px*0.16); g.strokeStyle = "rgba(0,0,0,.8)"; g.fillStyle = "#ffffff";
-    const L = stampLines(shotTime), lh = px*1.2, y0 = st.y*H - lh/2;
+    const L = stampLines(shotTime); if(sel.place) L.push(sel.place);
+    const lh = px*1.2, y0 = st.y*H - (L.length-1)*lh/2;
     L.forEach((t,i) => { g.strokeText(t, st.x*W, y0 + i*lh); g.fillText(t, st.x*W, y0 + i*lh); });
+    blockBottom = y0 + (L.length-1)*lh + px*0.6;
+  }
+  // memo: right under the stamp by default, draggable
+  const t = ov.text.trim();
+  if(t){
+    const C = COLORS[lists.style.color] || COLORS[0];
+    const px = Math.round(base * lists.style.size / 100);
+    const lines = t.split(/\n/); const lh = px * 1.15;
+    if(!ov.moved){ ov.x = st.x; ov.y = Math.min(1 - (lines.length*lh/2 + px*0.3)/H, (blockBottom + px*0.4 + (lines.length*lh)/2) / H); }
+    g.font = fontSpec(px); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+    const y0 = ov.y*H - (lines.length-1)*lh/2;
+    g.lineWidth = Math.max(2, px*0.09); g.strokeStyle = C.stroke; g.fillStyle = C.fill;
+    lines.forEach((ln,i) => { g.strokeText(ln, ov.x*W, y0 + i*lh); g.fillText(ln, ov.x*W, y0 + i*lh); });
   }
 }
 const view = $("view");
@@ -409,11 +420,12 @@ view.addEventListener("pointerdown", e => {
   if(!items.length) return;
   const d = o => Math.hypot(o.x - p.x, o.y - p.y);
   const o = items.sort((a,b) => d(a) - d(b))[0];
+  if(o === ov) ov.moved = true;
   vdrag = { o, dx: p.x - o.x, dy: p.y - o.y }; view.setPointerCapture(e.pointerId); e.preventDefault();
 });
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
 view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
-$("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); };
+$("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
@@ -519,13 +531,15 @@ async function analyze(){
 규칙:
 - "pick": 기존 선택지 중 사진에 맞는 것, 맞는 순서대로 최대 3개 (없으면 빈 배열). 기존 선택지 문자열을 그대로 쓴다.
 - "labels": 기존 선택지에 없는 새 라벨 후보 3개. 한국어 명사형 2~8자, 공백 없이.
-- "tags": 기존 태그 중 맞는 것 최대 3개 + 새 태그 후보 최대 2개. 한국어, 공백 없이.
-JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증","점심식사","스타벅스"],"tags":["지출증빙","식대"]}`;
+- "place": 사용자의 장소 목록 ${JSON.stringify(lists.places)} 중 사진이 찍힌 곳으로 가장 그럴듯한 것 1개 (모르겠으면 빈 문자열).
+- "newPlaces": 목록에 없는 장소 후보 최대 2개 (예: 카페, 식당, 거래처). 2~6자.
+- "memos": 나중에 이 사진을 보고 떠올리기 쉽게 사진 위에 적을 짧은 메모 4개. 무엇인지, 할 일, 고칠 점·문제점 관점을 섞는다. 각 12자 이내, 한국어.
+JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"],"place":"회사","newPlaces":["카페"],"memos":["점심 식대 영수증","경비 처리하기","카드 확인 필요","팀 점심"]}`;
     const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.readAsDataURL(img); });
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type":"application/json", "x-api-key": key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-      body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 400,
+      body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 600,
         messages: [{ role:"user", content: [ {type:"image", source:{type:"base64", media_type:"image/jpeg", data:b64}}, {type:"text", text: prompt + "\n설명 없이 JSON만 출력한다."} ] }] })
     });
     if(!resp.ok){ throw { code: resp.status === 401 ? "badkey" : "http" }; }
@@ -537,6 +551,11 @@ JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"
     ai.pick = pick;
     ai.labels = arr(r && r.labels).filter(x => !lists.labels.includes(x));
     ai.tags = arr(r && r.tags);
+    const pl = clean(r && r.place); ai.place = lists.places.includes(pl) ? pl : "";
+    ai.newPlaces = arr(r && r.newPlaces).filter(x => !lists.places.includes(x)).slice(0,2);
+    ai.memos = Array.isArray(r && r.memos) ? r.memos.map(x => String(x).trim()).filter(Boolean).slice(0,4) : [];
+    if(!sel.place && ai.place) sel.place = ai.place;
+    drawView();
     if(!sel.label) sel.label = pick[0] || ai.labels[0] || "";
     ai.status = "done";
   }catch(e){ ai.status = (e && e.code === "badkey") ? "badkey" : "fail"; }
@@ -561,9 +580,17 @@ function render(){
     [...(ai.pick||[]), ...lists.labels.filter(l=>!picked.has(l))].forEach(l => L.appendChild(chip((picked.has(l)?"✦ ":"")+l,{on:sel.label===l,onClick:()=>{ sel.label = sel.label===l?"":l; render(); }})));
   }
   $("editLabels").textContent = edit.labels ? "완료" : "편집";
+  const P = $("places"); P.innerHTML = "";
+  lists.places.forEach(pl => P.appendChild(chip((ai.place===pl && !edit.places ? "✦ " : "") + pl, { on: !edit.places && sel.place===pl, removable: edit.places, onClick: () => {
+    if(edit.places){ lists.places = lists.places.filter(x=>x!==pl); if(sel.place===pl) sel.place=""; persist(); }
+    else sel.place = sel.place===pl ? "" : pl; render(); drawView(); } })));
+  if(!edit.places) ai.newPlaces.forEach(pl => P.appendChild(chip("✦ "+pl, { aiCls:true, on: sel.place===pl, onClick: () => { sel.place = sel.place===pl ? "" : pl; render(); drawView(); } })));
+  $("editPlaces").textContent = edit.places ? "완료" : "편집";
+  const M = $("memos"); M.innerHTML = "";
+  ai.memos.forEach(m => M.appendChild(chip("✦ "+m, { aiCls:true, on: ov.text.trim()===m, onClick: () => { ov.text = ov.text.trim()===m ? "" : m; $("ovText").value = ov.text; drawView(); render(); } })));
   const st = $("aiState");
   st.innerHTML = ai.status==="busy" ? '<span class="dot"></span>사진 내용을 분석하는 중…' :
-    ai.status==="done" ? "✦ 표시는 사진 분석 추천입니다." :
+    ai.status==="done" ? "✦ 표시는 사진 분석 추천입니다. 누르면 적용됩니다." :
     ai.status==="fail" ? '분석하지 못했습니다. 인터넷 연결을 확인하세요. <button class="link" id="retry" type="button">다시 분석</button>' :
     ai.status==="badkey" ? 'API 키가 맞지 않습니다. 설정에서 키를 다시 넣으세요.' : "";
   const rt = $("retry"); if(rt) rt.onclick = analyze;
@@ -571,7 +598,7 @@ function render(){
   $("strip").textContent = fileName();
 
   const R = $("recent");
-  if(lists.recent && lists.recent.length){
+  if(R && lists.recent && lists.recent.length){
     R.innerHTML = "";
     lists.recent.slice(0,15).forEach(r => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = r.name; const s = document.createElement("span"); s.textContent = new Date(r.at).toLocaleString("ko-KR"); d.append(b,s); R.appendChild(d); });
   }
@@ -582,7 +609,9 @@ function addTo(key, input, after){
   $(input).value = ""; after(v); persist(); render();
 }
 $("addLabel").onclick = () => addTo("labels","newLabel", v => sel.label = v);
-[["newLabel","addLabel"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
+$("addPlace").onclick = () => { addTo("places","newPlace", v => sel.place = v); drawView(); };
+$("editPlaces").onclick = () => { edit.places = !edit.places; render(); };
+[["newLabel","addLabel"],["newPlace","addPlace"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
 $("editLabels").onclick = () => { edit.labels = !edit.labels; render(); };
 
 /* ---------- metadata (EXIF + XMP) ---------- */
@@ -658,6 +687,7 @@ let lastBlob = null, lastName = "";
 async function buildFile(){
   if(sel.label && !lists.labels.includes(sel.label)) lists.labels.push(sel.label);
   sel.tags.forEach(t => { if(!lists.tags.includes(t)) lists.tags.push(t); });
+  if(sel.place && !lists.places.includes(sel.place)) lists.places.push(sel.place);
   await ensureFont();
   const out = document.createElement("canvas"); out.width = src.width; out.height = src.height;
   const g = out.getContext("2d"); g.drawImage(src,0,0); drawOverlays(g, out.width, out.height);
