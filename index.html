@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gaegu:wght@700&family=Nanum+Pen+Script&family=Nanum+Myeongjo:wght@800&family=Noto+Sans+KR:wght@900&display=swap">
 <style>
-/* Layout: one narrow column. Home → one edit screen (photo with text, name, folder, tags, save). Crop is a separate panel. */
+/* Layout: one narrow column. Home = live camera; edit = photo with date/text, size sliders, name, save. Crop is a separate panel. */
 :root{
   --bg:#f3f4f2; --surface:#ffffff; --fg:#1b1f1d; --muted:#5f6a64; --line:#d9ddd9;
   --accent:#0f6b5c; --accent-fg:#ffffff; --accent-soft:#dcefe9; --warn:#a2451c; --strip:#1b1f1d; --strip-fg:#f1f4ef;
@@ -78,7 +78,8 @@ textarea{resize:none}
 .colors button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
 .colors button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
 .sizer{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
-.sizer input{flex:1;accent-color:var(--accent)}
+.sizer span:first-child{min-width:56px}
+.sizer input{flex:0 1 200px;min-width:0;accent-color:var(--accent)}
 .strip{background:var(--strip);color:var(--strip-fg);border-radius:8px;padding:12px 14px;font:700 15px/1.4 var(--f-mono);word-break:break-all}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:7px 13px;font-size:14px;display:inline-flex;align-items:center;gap:6px}
@@ -97,8 +98,11 @@ textarea{resize:none}
 .toggle{display:flex;gap:8px;align-items:center;font-size:14px}
 .toggle input{width:18px;height:18px;accent-color:var(--accent)}
 .group{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
-.cam{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:3/4;max-height:68vh;margin:0 auto;width:100%}
-.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:3/4;max-height:52vh;width:auto;max-width:100%;margin:0 auto;width:100%}
+.cam video{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center}
+.zoom{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:6px;background:rgba(0,0,0,.45);padding:4px;border-radius:999px}
+.zoom button{border:0;background:transparent;color:#fff;font:700 13px var(--f-body);min-width:40px;height:34px;border-radius:999px}
+.zoom button.on{background:#fff;color:#000}
 .shoot{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .shutter{width:74px;height:74px;border-radius:50%;border:5px solid var(--accent);background:var(--surface);box-shadow:inset 0 0 0 4px var(--bg)}
 .shutter:active{background:var(--accent)}
@@ -137,7 +141,7 @@ textarea{resize:none}
 
   <!-- home: live camera -->
   <section id="sHome">
-    <div class="cam"><video id="video" playsinline muted autoplay></video><div class="camerr" id="camErr" hidden></div></div>
+    <div class="cam"><video id="video" playsinline muted autoplay></video><div class="zoom" id="zoom" hidden></div><div class="camerr" id="camErr" hidden></div></div>
     <div class="shoot">
       <label class="btn side" for="pick" style="position:relative;overflow:hidden;text-align:center">갤러리<input id="pick" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0"></label>
       <button class="shutter" id="shutter" type="button" aria-label="촬영"></button>
@@ -149,18 +153,13 @@ textarea{resize:none}
 
   <!-- edit: everything on one screen -->
   <section id="sEdit" hidden>
-    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">사진을 눌러 글자 위치 이동</span></div>
+    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·글자를 끌어서 이동</span></div>
     <div class="row">
       <button class="btn" id="toCrop" type="button">자르기·회전</button>
-            <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간 넣기</label>
+      <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간 넣기</label>
     </div>
-
-    <div class="group">
-      <div class="sub"><h2>폴더</h2><button class="link" id="editFolders" type="button">편집</button></div>
-      <div class="chips" id="folders"></div>
-      <div class="addrow"><input type="text" id="newFolder" placeholder="새 폴더 이름" maxlength="30"><button class="btn" id="addFolder" type="button">+ 새 폴더</button></div>
-      <label class="toggle" for="prefix"><input type="checkbox" id="prefix" checked> 파일명 앞에 폴더명 붙이기</label>
-    </div>
+    <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
+    <div class="sizer"><span>글자 크기</span><input type="range" id="ovSize" min="5" max="15" value="10"><span id="ovSizeVal">10</span></div>
 
     <div class="group">
       <div class="sub"><h2>이름 (날짜_시간_선택지)</h2><button class="link" id="editLabels" type="button">편집</button></div>
@@ -174,7 +173,6 @@ textarea{resize:none}
       <textarea id="ovText" rows="2" maxlength="60" placeholder="추가로 쓸 글자 (비우면 안 씀)"></textarea>
       <div class="fonts" id="fonts"></div>
       <div class="colors" id="colors"></div>
-      <div class="sizer"><span>크기</span><input type="range" id="ovSize" min="4" max="30" value="12"><span id="ovSizeVal">12</span></div>
     </div>
 
     <div class="strip" id="strip"></div>
@@ -207,7 +205,7 @@ const DEFAULTS = {
   tags: ["업무","개인","세무","지출증빙","고객사"],
   labels: ["영수증","회의","서류","명함","식사","운동","메모","현장"],
   recent: [],
-  style: { font: "Black Han Sans", color: 0, size: 12 }
+  style: { font: "Black Han Sans", color: 0, size: 10, stamp: 10 }
 };
 const FONTS = [
   { f:"Black Han Sans", w:"400", n:"굵은 제목" },
@@ -231,7 +229,8 @@ let shotTime = new Date();
 let sel = { label: "", folder: "", tags: new Set() };
 let ai = { labels: [], tags: [], pick: [], status: "" };
 const edit = { labels:false, folders:false, tags:false };
-let ov = { text:"", x:.5, y:.78 };
+let ov = { text:"", x:.5, y:.4 };
+let st = { x:.5, y:.625 };
 
 /* ---------- persistence (this phone only) ---------- */
 function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); } }catch(e){} }
@@ -273,7 +272,6 @@ function fileName(){
   const r = round2h(shotTime);
   const label = clean(sel.label);
   let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (label ? "_" + label : "");
-  if($("prefix").checked && sel.folder) n = "[" + clean(sel.folder) + "]" + n;
   return n + ".jpg";
 }
 
@@ -305,9 +303,23 @@ async function startCam(){
   if(stream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ if(!navigator.mediaDevices) camErr("이 브라우저는 카메라 미리보기를 지원하지 않습니다. 아래 '기본 카메라'를 쓰세요."); return; }
   try{
     stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ideal:"environment"}, width:{ideal:4032}, height:{ideal:3024} } });
-    track = stream.getVideoTracks()[0]; video.srcObject = stream; $("camErr").hidden = true;
+    track = stream.getVideoTracks()[0]; video.srcObject = stream; $("camErr").hidden = true; setupZoom();
     try{ await video.play(); }catch(e){}
   }catch(e){ stream = null; camErr("카메라를 열 수 없습니다. 크롬 주소창 왼쪽 아이콘 → 권한에서 카메라를 허용하거나, 아래 '기본 카메라'를 쓰세요."); }
+}
+let zoomVal = 1, hwZoom = false;
+function setupZoom(){
+  const Z = $("zoom"); Z.innerHTML = ""; zoomVal = 1; video.style.transform = "";
+  let caps = {}; try{ caps = track.getCapabilities ? track.getCapabilities() : {}; }catch(e){}
+  hwZoom = !!(caps.zoom && caps.zoom.max > caps.zoom.min);
+  let opts = hwZoom ? [caps.zoom.min, 1, 2, 3, 5].filter(v => v >= caps.zoom.min && v <= caps.zoom.max) : [1, 2, 3];
+  opts = [...new Set(opts.map(v => Math.round(v*10)/10))];
+  opts.forEach(v => { const b = document.createElement("button"); b.type = "button"; b.textContent = (v < 1 ? v.toFixed(1) : v) + "×"; b.className = v === 1 ? "on" : "";
+    b.onclick = async () => { zoomVal = v; [...Z.children].forEach(x => x.classList.toggle("on", x === b));
+      if(hwZoom){ try{ await track.applyConstraints({ advanced:[{ zoom: v }] }); }catch(e){} }
+      else video.style.transform = v === 1 ? "" : "scale(" + v + ")"; };
+    Z.appendChild(b); });
+  Z.hidden = opts.length < 2;
 }
 function camErr(t){ $("camErr").textContent = t; $("camErr").hidden = false; }
 function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; track = null; video.srcObject = null; } }
@@ -316,15 +328,17 @@ $("shutter").onclick = async () => {
   if(!track){ startCam(); return; }
   shotTime = new Date();
   let blob = null;
-  if("ImageCapture" in window){ try{ blob = await new ImageCapture(track).takePhoto(); }catch(e){ blob = null; } }
+  if(hwZoom && "ImageCapture" in window){ try{ blob = await new ImageCapture(track).takePhoto(); }catch(e){ blob = null; } }
   if(blob){ loadBlob(blob); return; }
-  const c = document.createElement("canvas"); c.width = video.videoWidth; c.height = video.videoHeight;
-  c.getContext("2d").drawImage(video,0,0); startEdit(c);
+  const vw = video.videoWidth, vh = video.videoHeight, z = hwZoom ? 1 : zoomVal;
+  const sw = Math.round(vw/z), sh = Math.round(vh/z);
+  const c = document.createElement("canvas"); c.width = sw; c.height = sh;
+  c.getContext("2d").drawImage(video, (vw-sw)/2, (vh-sh)/2, sw, sh, 0, 0, sw, sh); startEdit(c);
 };
 function startEdit(canvas){
   src = canvas;
   sel = { label:"", folder: sel.folder || "", tags: new Set() }; ai = { labels:[], tags:[], pick:[], status:"" };
-  ov = { text:"", x:.5, y:.78 }; $("ovText").value = "";
+  ov = { text:"", x:.5, y:.4 }; st = { x:.5, y:.625 }; $("ovText").value = "";
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -366,11 +380,11 @@ function drawOverlays(g, W, H){
   }
   // date stamp: 2 lines, exact center, cute font
   if($("stampOn").checked){
-    const px = Math.max(16, Math.round(base * 0.11));
+    const px = Math.max(14, Math.round(base * (lists.style.stamp||10) / 100));
     g.font = "400 " + px + "px \"Jua\", \"Noto Sans KR\", sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
     g.lineJoin = "round"; g.lineWidth = Math.max(3, px*0.16); g.strokeStyle = "rgba(0,0,0,.8)"; g.fillStyle = "#ffffff";
-    const L = stampLines(shotTime), lh = px*1.2, y0 = H/2 - lh/2;
-    L.forEach((t,i) => { g.strokeText(t, W/2, y0 + i*lh); g.fillText(t, W/2, y0 + i*lh); });
+    const L = stampLines(shotTime), lh = px*1.2, y0 = st.y*H - lh/2;
+    L.forEach((t,i) => { g.strokeText(t, st.x*W, y0 + i*lh); g.fillText(t, st.x*W, y0 + i*lh); });
   }
 }
 const view = $("view");
@@ -382,23 +396,38 @@ async function drawView(){
   const g = view.getContext("2d");
   g.drawImage(src,0,0,view.width,view.height);
   drawOverlays(g, view.width, view.height);
-  $("tip").hidden = !ov.text.trim();
+  $("tip").hidden = !($("stampOn").checked || ov.text.trim());
 }
-let vdrag = false;
-function moveText(e){ const r = view.getBoundingClientRect(); ov.x = Math.min(.98, Math.max(.02, (e.clientX-r.left)/r.width)); ov.y = Math.min(.98, Math.max(.02, (e.clientY-r.top)/r.height)); drawView(); }
-view.addEventListener("pointerdown", e => { if(!ov.text.trim()) return; vdrag = true; view.setPointerCapture(e.pointerId); moveText(e); e.preventDefault(); });
-view.addEventListener("pointermove", e => { if(vdrag) moveText(e); });
-view.addEventListener("pointerup", () => vdrag = false); view.addEventListener("pointercancel", () => vdrag = false);
+let vdrag = null;
+const relPos = e => { const r = view.getBoundingClientRect(); return { x: (e.clientX-r.left)/r.width, y: (e.clientY-r.top)/r.height }; };
+const clamp = v => Math.min(.98, Math.max(.02, v));
+function moveItem(e){ const p = relPos(e); vdrag.o.x = clamp(p.x - vdrag.dx); vdrag.o.y = clamp(p.y - vdrag.dy); drawView(); }
+view.addEventListener("pointerdown", e => {
+  const p = relPos(e), items = [];
+  if($("stampOn").checked) items.push(st);
+  if(ov.text.trim()) items.push(ov);
+  if(!items.length) return;
+  const d = o => Math.hypot(o.x - p.x, o.y - p.y);
+  const o = items.sort((a,b) => d(a) - d(b))[0];
+  vdrag = { o, dx: p.x - o.x, dy: p.y - o.y }; view.setPointerCapture(e.pointerId); e.preventDefault();
+});
+view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
+view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); };
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
 $("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); };
 $("ovSize").onchange = persist;
+$("stSize").oninput = () => { lists.style.stamp = +$("stSize").value; $("stSizeVal").textContent = lists.style.stamp; drawView(); };
+$("stSize").onchange = persist;
 function renderStyle(){
   [...$("fonts").children].forEach(b => b.classList.toggle("on", b.dataset.f === lists.style.font));
   [...$("colors").children].forEach((b,i) => b.classList.toggle("on", i === lists.style.color));
+  if(lists.style.size < 5 || lists.style.size > 15) lists.style.size = 10;
+  if(!(lists.style.stamp >= 5 && lists.style.stamp <= 15)) lists.style.stamp = 10;
   $("ovSize").value = lists.style.size; $("ovSizeVal").textContent = lists.style.size;
+  $("stSize").value = lists.style.stamp; $("stSizeVal").textContent = lists.style.stamp;
 }
 renderStyle();
 
@@ -539,18 +568,12 @@ function render(){
     ai.status==="badkey" ? 'API 키가 맞지 않습니다. 설정에서 키를 다시 넣으세요.' : "";
   const rt = $("retry"); if(rt) rt.onclick = analyze;
 
-  const F = $("folders"); F.innerHTML = "";
-  lists.folders.forEach(f => F.appendChild(chip(f,{on:!edit.folders && sel.folder===f, removable:edit.folders, onClick:()=>{
-    if(edit.folders){ lists.folders = lists.folders.filter(x=>x!==f); if(sel.folder===f) sel.folder=""; persist(); }
-    else sel.folder = sel.folder===f?"":f; render(); }})));
-  $("editFolders").textContent = edit.folders ? "완료" : "편집";
-
   $("strip").textContent = fileName();
 
   const R = $("recent");
   if(lists.recent && lists.recent.length){
     R.innerHTML = "";
-    lists.recent.slice(0,15).forEach(r => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = r.name; const s = document.createElement("span"); s.textContent = (r.folder?("폴더 "+r.folder):"폴더 없음") + (r.tags&&r.tags.length?("  ·  #"+r.tags.join(" #")):""); d.append(b,s); R.appendChild(d); });
+    lists.recent.slice(0,15).forEach(r => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = r.name; const s = document.createElement("span"); s.textContent = new Date(r.at).toLocaleString("ko-KR"); d.append(b,s); R.appendChild(d); });
   }
 }
 function addTo(key, input, after){
@@ -559,11 +582,8 @@ function addTo(key, input, after){
   $(input).value = ""; after(v); persist(); render();
 }
 $("addLabel").onclick = () => addTo("labels","newLabel", v => sel.label = v);
-$("addFolder").onclick = () => addTo("folders","newFolder", v => sel.folder = v);
-[["newLabel","addLabel"],["newFolder","addFolder"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
+[["newLabel","addLabel"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
 $("editLabels").onclick = () => { edit.labels = !edit.labels; render(); };
-$("editFolders").onclick = () => { edit.folders = !edit.folders; render(); };
-$("prefix").onchange = render;
 
 /* ---------- metadata (EXIF + XMP) ---------- */
 function ucs2(s){ const a=[]; for(const ch of s+"\0"){ const c=ch.charCodeAt(0); a.push(c&255, c>>8); } return a; }
