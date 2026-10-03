@@ -121,8 +121,9 @@ textarea{resize:none}
 .done{position:fixed;inset:0;z-index:50;background:rgba(10,12,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 16px;animation:fin .25s ease-out}
 .done img{max-width:100%;max-height:72vh;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .done p{color:#fff;font:500 13px var(--f-mono);margin:0;text-align:center;word-break:break-all}
+.done .tolog{border:0;border-radius:999px;padding:12px 22px;font:700 15px var(--f-body);background:#fff;color:#111}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
-.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 5s linear forwards}
+.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 7s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.done{animation:none}}
@@ -407,32 +408,38 @@ function drawOverlays(g, W, H){
   }
 }
 const view = $("view");
-/* ---------- frame (액자) ---------- */
-const frameW = (W, H) => Math.max(8, Math.round(Math.min(W, H) * 0.05));
-function drawFrame(g, W, H, b){
+/* ---------- frame (액자): blurred tone of the photo itself ---------- */
+const frameW = (W, H) => Math.max(12, Math.round(Math.min(W, H) * 0.10));
+function drawFrameBg(g, img, W, H, b){
   const TW = W + 2*b, TH = H + 2*b;
-  // inner shadow on photo edges (depth)
-  const d = b*0.6;
+  // blurred, slightly dimmed copy of the photo fills the whole frame
+  const k = Math.max(TW / W, TH / H) * 1.08, dw = W*k, dh = H*k;
+  g.save(); g.filter = "blur(" + Math.round(b*0.45) + "px) saturate(1.15) brightness(.82)";
+  g.drawImage(img, (TW-dw)/2, (TH-dh)/2, dw, dh); g.restore();
+  // soft bevel: lit top/left, shaded bottom/right
+  const side = (pts, c) => { g.beginPath(); pts.forEach(([x,y],i) => i ? g.lineTo(x,y) : g.moveTo(x,y)); g.closePath(); g.fillStyle = c; g.fill(); };
+  side([[0,0],[TW,0],[TW-b,b],[b,b]], "rgba(255,255,255,.16)");
+  side([[0,0],[b,b],[b,TH-b],[0,TH]], "rgba(255,255,255,.08)");
+  side([[TW,0],[TW,TH],[TW-b,TH-b],[TW-b,b]], "rgba(0,0,0,.18)");
+  side([[0,TH],[TW,TH],[TW-b,TH-b],[b,TH-b]], "rgba(0,0,0,.26)");
+  g.lineWidth = Math.max(1, b*0.03); g.strokeStyle = "rgba(255,255,255,.35)"; g.strokeRect(g.lineWidth/2, g.lineWidth/2, TW-g.lineWidth, TH-g.lineWidth);
+  // drop shadow under the photo
+  g.save(); g.shadowColor = "rgba(0,0,0,.55)"; g.shadowBlur = b*0.35; g.shadowOffsetY = b*0.08; g.fillStyle = "#000"; g.fillRect(b, b, W, H); g.restore();
+}
+function drawFrameFg(g, W, H, b){
+  // inner shadow on the photo edges + thin light lip
+  const d = b*0.25;
   [[b, b, W, d, 0, b, 0, b+d], [b, b+H-d, W, d, 0, b+H, 0, b+H-d], [b, b, d, H, b, 0, b+d, 0], [b+W-d, b, d, H, b+W, 0, b+W-d, 0]].forEach(([x,y,w,h,x0,y0,x1,y1]) => {
-    const gr = g.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,"rgba(0,0,0,.45)"); gr.addColorStop(1,"rgba(0,0,0,0)");
+    const gr = g.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,"rgba(0,0,0,.35)"); gr.addColorStop(1,"rgba(0,0,0,0)");
     g.fillStyle = gr; g.fillRect(x,y,w,h);
   });
-  // four bevelled sides: top/left lit, bottom/right shaded
-  const side = (pts, c1, c2, x0,y0,x1,y1) => { const gr = g.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,c1); gr.addColorStop(1,c2);
-    g.beginPath(); pts.forEach(([x,y],i) => i ? g.lineTo(x,y) : g.moveTo(x,y)); g.closePath(); g.fillStyle = gr; g.fill(); };
-  side([[0,0],[TW,0],[TW-b,b],[b,b]], "#7a5a3c", "#4a3424", 0,0,0,b);
-  side([[0,0],[b,b],[b,TH-b],[0,TH]], "#6b4e34", "#3f2c1e", 0,0,b,0);
-  side([[TW,0],[TW,TH],[TW-b,TH-b],[TW-b,b]], "#2a1d14", "#3a291c", TW,0,TW-b,0);
-  side([[0,TH],[TW,TH],[TW-b,TH-b],[b,TH-b]], "#23180f", "#352519", 0,TH,0,TH-b);
-  // highlight + inner lip
-  g.lineWidth = Math.max(1, b*0.06); g.strokeStyle = "rgba(255,235,200,.35)"; g.strokeRect(g.lineWidth/2, g.lineWidth/2, TW-g.lineWidth, TH-g.lineWidth);
-  const lip = Math.max(2, b*0.14); g.lineWidth = lip; g.strokeStyle = "#e9e1d2"; g.strokeRect(b - lip/2, b - lip/2, W + lip, H + lip);
-  g.lineWidth = Math.max(1, b*0.04); g.strokeStyle = "rgba(0,0,0,.5)"; g.strokeRect(b - lip, b - lip, W + 2*lip, H + 2*lip);
+  const lip = Math.max(2, b*0.05); g.lineWidth = lip; g.strokeStyle = "rgba(255,255,255,.8)"; g.strokeRect(b - lip/2, b - lip/2, W + lip, H + lip);
 }
 function compose(g, img, W, H, b){
+  drawFrameBg(g, img, W, H, b);
   g.drawImage(img, b, b, W, H);
+  drawFrameFg(g, W, H, b);
   g.save(); g.translate(b, b); drawOverlays(g, W, H); g.restore();
-  drawFrame(g, W, H, b);
 }
 let vb = 0;
 async function drawView(){
@@ -735,6 +742,7 @@ async function buildFile(){
   persist();
 }
 let doneTimer = null;
+const DAILY_LOG_URL = "https://claude.ai/artifact/RPCrfxU7tcwF7YjrMvUFNv";
 function done(text){
   const box = document.createElement("div"); box.className = "done"; box.setAttribute("role","status");
   const img = document.createElement("img"); img.alt = "완성된 사진"; img.src = URL.createObjectURL(lastBlob);
@@ -742,7 +750,17 @@ function done(text){
   const bar = document.createElement("div"); bar.className = "bar5"; bar.appendChild(document.createElement("i"));
   box.append(img, p, bar); document.body.appendChild(box);
   const close = () => { clearTimeout(doneTimer); if(box.parentNode){ box.remove(); URL.revokeObjectURL(img.src); show("home"); } };
-  box.onclick = close; doneTimer = setTimeout(close, 5000);
+  const go = document.createElement("button"); go.type = "button"; go.className = "tolog"; go.textContent = "매일기록장에 올리기";
+  go.onclick = async ev => { ev.stopPropagation(); clearTimeout(doneTimer); bar.remove();
+    let copied = false;
+    try{ const png = await new Promise(r => { const c = document.createElement("canvas"); const im = new Image(); im.onload = () => { c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext("2d").drawImage(im,0,0); c.toBlob(r, "image/png"); }; im.src = img.src; });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]); copied = true; }catch(e){}
+    p.textContent = (copied ? "사진을 복사했습니다. " : "") + "매일기록장에서 + 기록 → 갤러리에서 → 다운로드의 이 사진(" + lastName + ")을 고르세요.";
+    window.open(DAILY_LOG_URL, "_blank", "noopener");
+    go.textContent = "닫기"; go.onclick = e2 => { e2.stopPropagation(); close(); };
+  };
+  box.insertBefore(go, bar);
+  box.onclick = close; doneTimer = setTimeout(close, 7000);
 }
 async function save(){
   if(!src) return;
