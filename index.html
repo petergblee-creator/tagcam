@@ -123,7 +123,7 @@ textarea{resize:none}
 .done p{color:#fff;font:500 13px var(--f-mono);margin:0;text-align:center;word-break:break-all}
 .done .tolog{border:0;border-radius:999px;padding:12px 22px;font:700 15px var(--f-body);background:#fff;color:#111}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
-.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 7s linear forwards}
+.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 3s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.done{animation:none}}
@@ -760,7 +760,7 @@ function done(text){
     go.textContent = "닫기"; go.onclick = e2 => { e2.stopPropagation(); close(); };
   };
   box.insertBefore(go, bar);
-  box.onclick = close; doneTimer = setTimeout(close, 7000);
+  box.onclick = close; doneTimer = setTimeout(close, 3000);
 }
 async function save(){
   if(!src) return;
