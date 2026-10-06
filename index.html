@@ -125,7 +125,7 @@ textarea{resize:none}
 .micbtn.on{background:var(--warn);border-color:var(--warn);color:#fff;animation:micp 1.2s ease-in-out infinite alternate}
 @keyframes micp{to{opacity:.75}}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
-.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 3s linear forwards}
+.done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 2s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.done{animation:none}}
@@ -774,7 +774,7 @@ function done(text){
   const bar = document.createElement("div"); bar.className = "bar5"; bar.appendChild(document.createElement("i"));
   box.append(img, p, bar); document.body.appendChild(box);
   const close = () => { clearTimeout(doneTimer); if(box.parentNode){ box.remove(); URL.revokeObjectURL(img.src); show("home"); } };
-  box.onclick = close; doneTimer = setTimeout(close, 3000);
+  box.onclick = close; doneTimer = setTimeout(close, 2000);
 }
 async function save(){
   stopMic();
