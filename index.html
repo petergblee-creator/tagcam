@@ -121,7 +121,9 @@ textarea{resize:none}
 .done{position:fixed;inset:0;z-index:50;background:rgba(10,12,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 16px;animation:fin .25s ease-out}
 .done img{max-width:100%;max-height:72vh;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .done p{color:#fff;font:500 13px var(--f-mono);margin:0;text-align:center;word-break:break-all}
-.done .tolog{border:0;border-radius:999px;padding:12px 22px;font:700 15px var(--f-body);background:#fff;color:#111}
+.micbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:13px;font:700 15px var(--f-body)}
+.micbtn.on{background:var(--warn);border-color:var(--warn);color:#fff;animation:micp 1.2s ease-in-out infinite alternate}
+@keyframes micp{to{opacity:.75}}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
 .done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 3s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
@@ -161,6 +163,7 @@ textarea{resize:none}
   <!-- edit: everything on one screen -->
   <section id="sEdit" hidden>
     <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
+    <button class="micbtn" id="micBtn" type="button">🎤 말로 메모</button>
     <div class="ai-state" id="aiState"></div>
 
     <div class="group" style="border-top:0;padding-top:0">
@@ -293,6 +296,7 @@ function fileName(){
 
 /* ---------- screens ---------- */
 function show(name){
+  if(name !== "edit" && typeof stopMic === "function") stopMic();
   screen = name;
   $("sHome").hidden = name !== "home";
   $("sEdit").hidden = name !== "edit";
@@ -468,6 +472,27 @@ view.addEventListener("pointerdown", e => {
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
 view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
+/* 말로 메모: 버튼 누르면 시작, 다시 누르면 끝 */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let mic = null;
+function paintMic(){ const b = $("micBtn"); b.classList.toggle("on", !!mic); b.textContent = mic ? "■ 말하기 끝 (듣는 중)" : "🎤 말로 메모"; }
+function stopMic(){ const m = mic; mic = null; if(m) try{ m.rec.stop(); }catch(e){} paintMic(); }
+function startMic(){
+  if(!SR){ $("ovText").focus(); alert("이 브라우저는 음성 입력을 지원하지 않습니다. 키보드의 🎤 버튼을 쓰세요."); return; }
+  const rec = new SR(); rec.lang = "ko-KR"; rec.continuous = true; rec.interimResults = true;
+  mic = { rec, base: ov.text.trim() };
+  rec.onresult = e => {
+    if(!mic || mic.rec !== rec) return;
+    let said = ""; for(let i = 0; i < e.results.length; i++) said += e.results[i][0].transcript;
+    ov.text = [mic.base, said.trim()].filter(Boolean).join(" ").slice(0, 40);
+    $("ovText").value = ov.text; drawView(); render();
+  };
+  rec.onerror = e => { if(["not-allowed","service-not-allowed","audio-capture"].includes(e.error)){ mic = null; paintMic(); alert("마이크 권한이 꺼져 있습니다. 주소창 왼쪽 자물쇠 → 마이크 허용"); } };
+  rec.onend = () => { if(mic && mic.rec === rec){ mic.base = ov.text.trim(); try{ rec.start(); }catch(e){ mic = null; paintMic(); } } };
+  try{ rec.start(); }catch(e){ mic = null; paintMic(); return; }
+  paintMic();
+}
+$("micBtn").onclick = () => mic ? stopMic() : startMic();
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
@@ -742,7 +767,6 @@ async function buildFile(){
   persist();
 }
 let doneTimer = null;
-const DAILY_LOG_URL = "https://claude.ai/artifact/RPCrfxU7tcwF7YjrMvUFNv";
 function done(text){
   const box = document.createElement("div"); box.className = "done"; box.setAttribute("role","status");
   const img = document.createElement("img"); img.alt = "완성된 사진"; img.src = URL.createObjectURL(lastBlob);
@@ -750,19 +774,10 @@ function done(text){
   const bar = document.createElement("div"); bar.className = "bar5"; bar.appendChild(document.createElement("i"));
   box.append(img, p, bar); document.body.appendChild(box);
   const close = () => { clearTimeout(doneTimer); if(box.parentNode){ box.remove(); URL.revokeObjectURL(img.src); show("home"); } };
-  const go = document.createElement("button"); go.type = "button"; go.className = "tolog"; go.textContent = "매일기록장에 올리기";
-  go.onclick = async ev => { ev.stopPropagation(); clearTimeout(doneTimer); bar.remove();
-    let copied = false;
-    try{ const png = await new Promise(r => { const c = document.createElement("canvas"); const im = new Image(); im.onload = () => { c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext("2d").drawImage(im,0,0); c.toBlob(r, "image/png"); }; im.src = img.src; });
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]); copied = true; }catch(e){}
-    p.textContent = (copied ? "사진을 복사했습니다. " : "") + "매일기록장에서 + 기록 → 갤러리에서 → 다운로드의 이 사진(" + lastName + ")을 고르세요.";
-    window.open(DAILY_LOG_URL, "_blank", "noopener");
-    go.textContent = "닫기"; go.onclick = e2 => { e2.stopPropagation(); close(); };
-  };
-  box.insertBefore(go, bar);
   box.onclick = close; doneTimer = setTimeout(close, 3000);
 }
 async function save(){
+  stopMic();
   if(!src) return;
   $("next").disabled = true;
   await buildFile();
