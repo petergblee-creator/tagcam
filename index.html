@@ -199,6 +199,11 @@ body.editing .bar{display:none!important}
         <input type="text" id="ovText" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점" enterkeyhint="done">
         <div class="chips" id="memos"></div>
         <div class="fld">
+          <div class="sub"><span class="lbl">주제</span><button class="link" id="editTopics" type="button">편집</button></div>
+          <div class="chips" id="topics"></div>
+          <div class="addrow" id="topicAdd" hidden><input type="text" id="newTopic" placeholder="새 주제 (예: 독서)" maxlength="12"><button class="btn" id="addTopic" type="button">추가</button></div>
+        </div>
+        <div class="fld">
           <div class="sub"><span class="lbl">장소</span><button class="link" id="editPlaces" type="button">편집</button></div>
           <div class="chips" id="places"></div>
           <div class="addrow" id="placeAdd" hidden><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
@@ -252,7 +257,8 @@ const DEFAULTS = {
   labels: ["영수증","회의","서류","명함","식사","운동","메모","현장"],
   recent: [],
   style: { font: "Black Han Sans", color: 1, size: 13, stamp: 10, v: 2 },
-  places: ["집","회사","헬스장"]
+  places: ["집","회사","헬스장"],
+  topics: ["운동","식단","수면","영어","일어","청소","업무","출퇴근","피부"]
 };
 const FONTS = [
   { f:"Black Han Sans", w:"400", n:"굵은 글씨" },
@@ -272,13 +278,14 @@ let src = null;          // working image (after optional crop/rotate)
 let shotTime = new Date();
 let sel = { label: "", folder: "", tags: new Set(), place: "" };
 let ai = { labels: [], tags: [], pick: [], status: "", place: "", newPlaces: [], memos: [] };
-const edit = { labels:false, folders:false, tags:false, places:false };
+const edit = { labels:false, folders:false, tags:false, places:false, topics:false };
 let ov = { text:"", x:.5, y:.9, moved:false };
 let st = { x:.5, y:.82 };
 let color = BLUE;
+const savedColor = () => (lists.style && COLORS[lists.style.color]) ? lists.style.color : BLUE;
 
 /* ---------- persistence (this phone only) ---------- */
-function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); if(lists.style.v !== 2){ lists.style.color = 1; lists.style.size = 13; lists.style.v = 2; } if(!Array.isArray(lists.places)) lists.places = DEFAULTS.places.slice(); if(!FONTS.some(F => F.f === lists.style.font)) lists.style.font = FONTS[0].f; } }catch(e){} }
+function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); if(lists.style.v !== 2){ lists.style.color = 1; lists.style.size = 13; lists.style.v = 2; } if(!Array.isArray(lists.places)) lists.places = DEFAULTS.places.slice(); if(!Array.isArray(lists.topics)) lists.topics = DEFAULTS.topics.slice(); if(lists.style.cv !== 1){ lists.style.color = BLUE; lists.style.cv = 1; } if(!FONTS.some(F => F.f === lists.style.font)) lists.style.font = FONTS[0].f; } }catch(e){} }
 function persist(){ try{ localStorage.setItem("tagcam", JSON.stringify(lists)); }catch(e){} }
 lsLoad();
 const getKey = () => { try{ return localStorage.getItem("tagcam_key")||""; }catch(e){ return ""; } };
@@ -316,7 +323,8 @@ function fileName(){
   const r = round2h(shotTime);
   const label = clean(sel.label);
   const memo = clean(ov.text).slice(0, 24), place = clean(sel.place);
-  let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (label ? "_" + label : "") + (place ? "_" + place : "") + (memo ? "_" + memo : "");
+  const topic = clean(sel.topic);
+  let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (topic ? "_" + topic : "") + (label ? "_" + label : "") + (place ? "_" + place : "") + (memo ? "_" + memo : "");
   return n + ".jpg";
 }
 
@@ -393,8 +401,8 @@ $("shutter").onclick = async () => {
 function startEdit(canvas){
   src = canvas;
   const lp = lists.lastPlace && lists.places.includes(lists.lastPlace) ? lists.lastPlace : "";
-  sel = { label:"", folder:"", tags: new Set(), place: lp }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[] };
-  ov = { text:"", x:.5, y:.9, moved:false }; st = { x:.5, y:.82, moved:false }; color = BLUE; $("ovText").value = ""; renderStyle();
+  sel = { label:"", folder:"", tags: new Set(), place: lp, topic: "" }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[], topic:"" };
+  ov = { text:"", x:.5, y:.9, moved:false }; st = { x:.5, y:.82, moved:false }; color = savedColor(); $("ovText").value = ""; renderStyle();
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -516,8 +524,8 @@ view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("p
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
-COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; renderStyle(); drawView(); }; $("colors").appendChild(b); });
-$("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); };
+COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
+$("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); render(); };
 $("ovSize").onchange = persist;
 $("stSize").oninput = () => { lists.style.stamp = +$("stSize").value; $("stSizeVal").textContent = lists.style.stamp; drawView(); };
 $("stSize").onchange = persist;
@@ -619,10 +627,11 @@ async function analyze(){
 규칙:
 - "pick": 기존 선택지 중 사진에 맞는 것, 맞는 순서대로 최대 3개 (없으면 빈 배열). 기존 선택지 문자열을 그대로 쓴다.
 - "labels": 기존 선택지에 없는 새 라벨 후보 3개. 한국어 명사형 2~8자, 공백 없이.
+- "topic": 사용자의 기록 주제 목록 ${JSON.stringify(lists.topics)} 중 가장 맞는 것 1개 (그대로 복사, 버스·지하철·길 위면 출퇴근, 애매해도 가장 가까운 것).
 - "place": 사용자의 장소 목록 ${JSON.stringify(lists.places)} 중 사진이 찍힌 곳으로 가장 그럴듯한 것 1개 (모르겠으면 빈 문자열).
 - "newPlaces": 목록에 없는 장소 후보 최대 2개 (예: 카페, 식당, 거래처). 2~6자.
 - "memos": 나중에 이 사진을 보고 떠올리기 쉽게 사진 위에 적을 짧은 메모 4개. 무엇인지, 할 일, 고칠 점·문제점 관점을 섞는다. 각 12자 이내, 한국어.
-JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"],"place":"회사","newPlaces":["카페"],"memos":["점심 식대 영수증","경비 처리하기","카드 확인 필요","팀 점심"]}`;
+JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"],"topic":"식단","place":"회사","newPlaces":["카페"],"memos":["점심 식대 영수증","경비 처리하기","카드 확인 필요","팀 점심"]}`;
     const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.readAsDataURL(img); });
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -640,6 +649,7 @@ JSON 하나만 답한다. 예: {"pick":["영수증"],"labels":["카페영수증"
     ai.labels = arr(r && r.labels).filter(x => !lists.labels.includes(x));
     ai.tags = arr(r && r.tags);
     const pl = clean(r && r.place); ai.place = lists.places.includes(pl) ? pl : "";
+    { const tp = clean(r && r.topic); ai.topic = lists.topics.includes(tp) ? tp : ""; if(!sel.topic && ai.topic) sel.topic = ai.topic; }
     ai.newPlaces = arr(r && r.newPlaces).filter(x => !lists.places.includes(x)).slice(0,2);
     ai.memos = Array.isArray(r && r.memos) ? r.memos.map(x => String(x).trim()).filter(Boolean).slice(0,4) : [];
     if(!sel.place && ai.place) sel.place = ai.place;
@@ -669,6 +679,12 @@ function render(){
   }
   if(!edit.labels){ L.appendChild(chip("+ 직접", {onClick: () => { $("labelAdd").hidden = !$("labelAdd").hidden; if(!$("labelAdd").hidden) $("newLabel").focus(); }})); }
   $("editLabels").textContent = edit.labels ? "완료" : "편집";
+  const TP = $("topics"); TP.innerHTML = "";
+  lists.topics.forEach(tp => TP.appendChild(chip((ai.topic===tp && !edit.topics ? "✦ " : "") + tp, { on: !edit.topics && sel.topic===tp, removable: edit.topics, onClick: () => {
+    if(edit.topics){ lists.topics = lists.topics.filter(x=>x!==tp); if(sel.topic===tp) sel.topic=""; persist(); }
+    else sel.topic = sel.topic===tp ? "" : tp; render(); } })));
+  if(!edit.topics) TP.appendChild(chip("+ 직접", {onClick: () => { $("topicAdd").hidden = !$("topicAdd").hidden; if(!$("topicAdd").hidden) $("newTopic").focus(); }}));
+  $("editTopics").textContent = edit.topics ? "완료" : "편집";
   const P = $("places"); P.innerHTML = "";
   lists.places.forEach(pl => P.appendChild(chip((ai.place===pl && !edit.places ? "✦ " : "") + pl, { on: !edit.places && sel.place===pl, removable: edit.places, onClick: () => {
     if(edit.places){ lists.places = lists.places.filter(x=>x!==pl); if(sel.place===pl) sel.place=""; persist(); }
@@ -701,7 +717,9 @@ function addTo(key, input, after){
 $("addLabel").onclick = () => { addTo("labels","newLabel", v => sel.label = v); $("labelAdd").hidden = true; };
 $("addPlace").onclick = () => { addTo("places","newPlace", v => sel.place = v); $("placeAdd").hidden = true; drawView(); };
 $("editPlaces").onclick = () => { edit.places = !edit.places; render(); };
-[["newLabel","addLabel"],["newPlace","addPlace"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
+$("editTopics").onclick = () => { edit.topics = !edit.topics; render(); };
+$("addTopic").onclick = () => { addTo("topics","newTopic", v => sel.topic = v); $("topicAdd").hidden = true; };
+[["newLabel","addLabel"],["newPlace","addPlace"],["newTopic","addTopic"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
 $("editLabels").onclick = () => { edit.labels = !edit.labels; render(); };
 
 /* ---------- metadata (EXIF + XMP) ---------- */
