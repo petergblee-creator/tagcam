@@ -71,6 +71,7 @@ button{font:inherit;cursor:pointer}
 .btn:focus-visible,.chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 textarea,input[type=text]{font:15px var(--f-body);padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-width:0}
 textarea{resize:none}
+.lsz{display:flex;flex-direction:column;gap:4px}.lsz:empty{display:none}.lsz .r{display:flex;align-items:center;gap:6px;font-size:13px}.lsz .r span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}.lsz .r b{width:44px;text-align:center;font-variant-numeric:tabular-nums}.lsz .r button{padding:3px 12px}
 .fonts{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .fonts button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:4px 10px;font-size:17px;line-height:1.3}
 .fonts button.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
@@ -218,6 +219,7 @@ body.editing .bar{display:none!important}
         <div style="display:flex;align-items:center;gap:8px"><h2 style="flex:1"><label for="ovText">메모 (사진 위에 들어감)</label></h2><button class="btn" id="ovNl" type="button" style="padding:5px 12px;font-weight:700">↵ 줄바꿈</button></div>
         <textarea id="ovText" rows="2" maxlength="80" placeholder="떠올릴 내용, 할 일, 고칠 점&#10;(엔터·↵ 버튼으로 줄바꿈)" enterkeyhint="enter"></textarea>
         <div class="chips" id="memos"></div>
+        <div id="lineSz" class="lsz"></div>
         <div class="fld">
           <div class="sub"><span class="lbl">주제</span><button class="link" id="editTopics" type="button">편집</button></div>
           <div class="chips" id="topics"></div>
@@ -311,8 +313,11 @@ let src = null;          // working image (after optional crop/rotate)
 let shotTime = new Date();
 let sel = { label: "", folder: "", tags: new Set(), place: "" };
 let ai = { labels: [], tags: [], pick: [], status: "", place: "", newPlaces: [], memos: [] };
-const edit = { labels:false, folders:false, tags:false, places:false, topics:false };
-let ov = { text:"", x:.5, y:.9, moved:false };
+const edit = { labels:false, folders:false, tags:false, places:false, topics:false, memos:false };
+/* 메모 줄마다 크기 배율 (1 = 기본) */
+const LSZ = [0.6, 0.8, 1, 1.25, 1.5, 1.8];
+const memoLay = (t, px) => { const lines = t.split(/\n/), ks = lines.map((_,i) => +(ov.lsz||[])[i] || 1), hs = ks.map(k => px*k*1.15); return { lines, ks, hs, bh: hs.reduce((a,b)=>a+b,0) }; };
+let ov = { text:"", x:.5, y:.9, moved:false, lsz:[] };
 let st = { x:.5, y:.82 };
 let color = BLUE;
 const savedColor = () => (lists.style && COLORS[lists.style.color]) ? lists.style.color : BLUE;
@@ -439,7 +444,7 @@ function startEdit(canvas){
   src = canvas;
   const lp = lists.lastPlace && lists.places.includes(lists.lastPlace) ? lists.lastPlace : "";
   sel = { label:"", folder:"", tags: new Set(), place: lp, topic: "" }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[], topic:"" };
-  ov = { text:"", x:.5, y:.9, moved:false }; st = { x:.5, y:.82, moved:false }; color = savedColor(); $("ovText").value = ""; renderStyle();
+  ov = { text:"", x:.5, y:.9, moved:false, lsz:[] }; st = { x:.5, y:.82, moved:false }; color = savedColor(); $("ovText").value = ""; renderStyle();
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -478,7 +483,7 @@ function drawOverlays(g, W, H){
     const lh = px*1.2;
     if(!st.moved){ // 날짜는 아래쪽(0.82), 메모가 밑에 들어갈 자리가 없으면 위로 올림
       st.y = .82; const t0 = ov.text.trim();
-      if(t0 && !ov.moved){ const mpx = Math.round(base * lists.style.size / 100), mh = t0.split(/\n/).length * mpx * 1.15;
+      if(t0 && !ov.moved){ const mpx = Math.round(base * lists.style.size / 100), mh = memoLay(t0, mpx).bh;
         const maxC = H - mpx*0.3 - mh - mpx*0.4 - (L.length-1)*lh/2 - px*0.6; st.y = Math.max(.1, Math.min(.82, maxC / H)); }
     }
     const y0 = st.y*H - (L.length-1)*lh/2;
@@ -490,12 +495,11 @@ function drawOverlays(g, W, H){
   if(t){
     const C = COLORS[color] || COLORS[BLUE];
     const px = Math.round(base * lists.style.size / 100);
-    const lines = t.split(/\n/); const lh = px * 1.15;
-    if(!ov.moved){ ov.x = st.x; ov.y = Math.min(1 - (lines.length*lh/2 + px*0.3)/H, (blockBottom + px*0.4 + (lines.length*lh)/2) / H); }
-    g.font = fontSpec(px); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
-    const y0 = ov.y*H - (lines.length-1)*lh/2;
-    g.lineWidth = Math.max(2, px*0.09); g.strokeStyle = C.stroke; g.fillStyle = C.fill;
-    lines.forEach((ln,i) => { g.strokeText(ln, ov.x*W, y0 + i*lh); g.fillText(ln, ov.x*W, y0 + i*lh); });
+    const { lines, ks, hs, bh } = memoLay(t, px);
+    if(!ov.moved){ ov.x = st.x; ov.y = Math.min(1 - (bh/2 + px*0.3)/H, (blockBottom + px*0.4 + bh/2) / H); }
+    g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.strokeStyle = C.stroke; g.fillStyle = C.fill;
+    let yy = ov.y*H - bh/2;
+    lines.forEach((ln,i) => { const p = Math.round(px*ks[i]); g.font = fontSpec(p); g.lineWidth = Math.max(2, p*0.09); yy += hs[i]/2; if(ln.trim()){ g.strokeText(ln, ov.x*W, yy); g.fillText(ln, ov.x*W, yy); } yy += hs[i]/2; });
   }
 }
 const view = $("view");
@@ -558,6 +562,12 @@ view.addEventListener("pointerdown", e => {
 });
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
 view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
+function paintLsz(){
+  const el = $("lineSz"); if(!el) return; const ls = ov.text.split(/\n/);
+  if(ls.filter(x => x.trim()).length < 2){ el.innerHTML = ""; return; }
+  el.innerHTML = ls.map((l,i) => l.trim() ? `<div class="r"><span>${i+1}줄 · ${l.trim().replace(/[&<>]/g,"")}</span><button class="btn" type="button" data-lz="${i}" data-d="-1">작게</button><b>${Math.round((+(ov.lsz||[])[i]||1)*100)}%</b><button class="btn" type="button" data-lz="${i}" data-d="1">크게</button></div>` : "").join("");
+  el.querySelectorAll("[data-lz]").forEach(b => b.onclick = () => { const i = +b.dataset.lz, cur = +(ov.lsz||[])[i] || 1; let k = LSZ.indexOf(cur); if(k < 0) k = 2; k = Math.max(0, Math.min(LSZ.length-1, k + +b.dataset.d)); ov.lsz = ov.lsz || []; ov.lsz[i] = LSZ[k]; paintLsz(); drawView(); });
+}
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
 $("ovNl").onpointerdown = e => e.preventDefault();
 $("ovNl").onclick = () => { const n = $("ovText"); if(n.value.length >= 80) return; const a0 = n.selectionStart ?? n.value.length, z = n.selectionEnd ?? a0; n.value = n.value.slice(0,a0) + "\n" + n.value.slice(z); n.selectionStart = n.selectionEnd = a0 + 1; n.focus(); ov.text = n.value; drawView(); render(); };
@@ -732,7 +742,16 @@ function render(){
   if(!edit.places){ const pa = chip("+ 직접", {onClick: () => { $("placeAdd").hidden = !$("placeAdd").hidden; if(!$("placeAdd").hidden) $("newPlace").focus(); }}); P.appendChild(pa); }
   $("editPlaces").textContent = edit.places ? "완료" : "편집";
   const M = $("memos"); M.innerHTML = "";
-  ai.memos.forEach(m => M.appendChild(chip("✦ "+m, { aiCls:true, on: ov.text.trim()===m, onClick: () => { ov.text = ov.text.trim()===m ? "" : m; $("ovText").value = ov.text; drawView(); render(); } })));
+  const setMemo = m => { ov.text = ov.text.trim()===m ? "" : m; ov.lsz = []; $("ovText").value = ov.text; drawView(); render(); };
+  ai.memos.forEach(m => M.appendChild(chip("✦ "+m, { aiCls:true, on: ov.text.trim()===m, onClick: () => setMemo(m) })));
+  // 자주 쓰는 메모: 저장해 두고 한 번에 넣기 (편집에서 ×로 삭제)
+  if(!Array.isArray(lists.memos)) lists.memos = [];
+  lists.memos.forEach(m => M.appendChild(chip("★ " + m.replace(/\n/g," / "), { on: !edit.memos && ov.text.trim()===m, removable: edit.memos, onClick: () => {
+    if(edit.memos){ lists.memos = lists.memos.filter(x => x!==m); persist(); render(); } else setMemo(m); } })));
+  if(!edit.memos){ const cur = ov.text.trim(); M.appendChild(chip("☆ 지금 메모 저장", { onClick: () => {
+    if(!cur){ alert("메모를 먼저 적으세요"); return; } if(!lists.memos.includes(cur)){ lists.memos = [cur, ...lists.memos].slice(0,12); persist(); } render(); } })); }
+  if(lists.memos.length) M.appendChild(chip(edit.memos ? "완료" : "편집", { onClick: () => { edit.memos = !edit.memos; render(); } }));
+  paintLsz();
   const st = $("aiState");
   st.innerHTML = ai.status==="busy" ? '<span class="dot"></span>사진 내용을 분석하는 중…' :
     ai.status==="done" ? "✦ 표시는 사진 분석 추천입니다. 누르면 적용됩니다." :
