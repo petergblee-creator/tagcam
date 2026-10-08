@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>태그 카메라</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gaegu:wght@700&family=Nanum+Pen+Script&family=Nanum+Myeongjo:wght@800&family=Noto+Sans+KR:wght@900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Black+Han+Sans&family=Jua&family=Nanum+Pen+Script&display=swap">
 <style>
 /* Layout: one narrow column. Home = live camera; edit = photo with date/text, size sliders, name, save. Crop is a separate panel. */
 :root{
@@ -48,7 +48,7 @@ h2{font-size:13px;margin:0;color:var(--muted);font-weight:500;letter-spacing:.06
 /* photo editor */
 .photo{position:relative;border-radius:10px;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none}
 .photo{display:flex;justify-content:center}
-.photo canvas{display:block;max-width:100%;max-height:46vh;width:auto;height:auto}
+.photo canvas{display:block;max-width:100%;max-height:52vh;width:auto;height:auto}
 .photo .tip{position:absolute;left:8px;top:8px;font-size:12px;color:#fff;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px;pointer-events:none}
 .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 .stage canvas{display:block;width:100%;height:auto}
@@ -72,14 +72,37 @@ button{font:inherit;cursor:pointer}
 textarea,input[type=text]{font:15px var(--f-body);padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-width:0}
 textarea{resize:none}
 .fonts{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
-.fonts button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 12px;font-size:18px;line-height:1.3}
+.fonts button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:4px 10px;font-size:17px;line-height:1.3}
 .fonts button.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
 .colors{display:flex;gap:8px}
-.colors button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
+.colors button{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);padding:0;flex:0 0 auto}
 .colors button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
 .sizer{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
-.sizer span:first-child{min-width:56px}
+.sizer span:first-child{min-width:56px;white-space:nowrap}
 .sizer input{flex:0 1 200px;min-width:0;accent-color:var(--accent)}
+.hdr{display:flex;gap:8px;align-items:center}
+.fsbtn{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:3px 9px;font-size:15px;line-height:1.3}
+/* stamp sheet: phone = photo, memo, rest; wide (fold) = 3 columns */
+.sthead{display:flex;align-items:center;gap:8px}
+.sthead h2{flex:1}
+.sthead .go{border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);border-radius:8px;padding:7px 18px;font-weight:700;font-size:14px}
+.stgrid{display:flex;flex-direction:column;gap:12px}
+.stgrid .photo{order:-1}
+.stL,.stR{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stR .acts{display:none;gap:8px}
+.stR .acts button{flex:1;white-space:nowrap;border-radius:10px;padding:11px;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.stR .acts button.go{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);flex:2}
+.colfont{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (min-width:640px){
+  body.editing{padding-bottom:12px}
+  body.editing .bar{display:none!important}
+  body.editing .wrap{max-width:1280px;padding-block:10px;gap:10px}
+  .stgrid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:14px}
+  .stgrid .photo{order:0}
+  .stgrid .photo canvas{max-height:min(78vh,720px);max-width:44vw}
+  .stL,.stR{max-height:calc(100vh - 110px);overflow:auto}
+  .stR .acts{display:flex}
+}
 .strip{background:var(--strip);color:var(--strip-fg);border-radius:8px;padding:12px 14px;font:700 15px/1.4 var(--f-mono);word-break:break-all}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:7px 13px;font-size:14px;display:inline-flex;align-items:center;gap:6px}
@@ -121,9 +144,6 @@ textarea{resize:none}
 .done{position:fixed;inset:0;z-index:50;background:rgba(10,12,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 16px;animation:fin .25s ease-out}
 .done img{max-width:100%;max-height:72vh;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .done p{color:#fff;font:500 13px var(--f-mono);margin:0;text-align:center;word-break:break-all}
-.micbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:13px;font:700 15px var(--f-body)}
-.micbtn.on{background:var(--warn);border-color:var(--warn);color:#fff;animation:micp 1.2s ease-in-out infinite alternate}
-@keyframes micp{to{opacity:.75}}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
 .done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 2s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
@@ -137,7 +157,7 @@ textarea{resize:none}
 <div class="wrap">
   <header>
     <h1>태그 카메라</h1>
-    <button class="gear" id="gear" type="button">설정</button>
+    <div class="hdr"><button class="fsbtn" id="fsBtn" type="button" aria-label="전체화면" title="전체화면">⛶</button><button class="gear" id="gear" type="button">설정</button></div>
   </header>
 
   <section class="settings" id="settings" hidden>
@@ -160,41 +180,41 @@ textarea{resize:none}
     </div>
   </section>
 
-  <!-- edit: everything on one screen -->
+  <!-- edit: stamp sheet (phone: photo → memo → rest / wide: 3 columns) -->
   <section id="sEdit" hidden>
-    <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
-    <button class="micbtn" id="micBtn" type="button">🎤 말로 메모</button>
-    <div class="ai-state" id="aiState"></div>
-
-    <div class="group" style="border-top:0;padding-top:0">
-      <div class="sub"><h2>장소</h2><button class="link" id="editPlaces" type="button">편집</button></div>
-      <div class="chips" id="places"></div>
-      <div class="addrow"><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
-    </div>
-
-    <div class="group">
-      <h2>메모 (사진 위에 들어감)</h2>
-      <textarea id="ovText" rows="2" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점"></textarea>
-      <div class="chips" id="memos"></div>
-      <div class="sizer"><span>메모 크기</span><input type="range" id="ovSize" min="5" max="15" value="13"><span id="ovSizeVal">13</span></div>
-      <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
-      <div class="colors" id="colors"></div>
-      <div class="fonts" id="fonts"></div>
-      <div class="row">
-        <button class="btn" id="toCrop" type="button">자르기·회전</button>
-        <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·시간·장소 넣기</label>
+    <div class="sthead"><h2>사진 위 표시</h2><button class="go" id="topSave" type="button">저장</button><button class="btn" id="topCancel" type="button">취소</button></div>
+    <div class="stgrid">
+      <div class="stL">
+        <h2><label for="ovText">메모 (사진 위에 들어감)</label></h2>
+        <input type="text" id="ovText" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점" enterkeyhint="done">
+        <div class="chips" id="memos"></div>
+        <div class="group">
+          <div class="sub"><h2>장소</h2><button class="link" id="editPlaces" type="button">편집</button></div>
+          <div class="chips" id="places"></div>
+          <div class="addrow"><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
+        </div>
+        <div class="group">
+          <div class="sub"><h2>파일 이름 선택지</h2><button class="link" id="editLabels" type="button">편집</button></div>
+          <div class="chips" id="labels"></div>
+          <div class="addrow"><input type="text" id="newLabel" placeholder="새 선택지 추가" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
+        </div>
+      </div>
+      <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
+      <div class="stR">
+        <div class="ai-state" id="aiState"></div>
+        <div class="sizer"><span>메모 크기</span><input type="range" id="ovSize" min="5" max="15" value="13"><span id="ovSizeVal">13</span></div>
+        <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
+        <div class="colfont"><div class="colors" id="colors"></div><div class="fonts" id="fonts"></div></div>
+        <div class="row">
+          <button class="btn" id="toCrop" type="button">자르기·회전</button>
+          <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·장소 넣기</label>
+        </div>
+        <div class="strip" id="strip"></div>
+        <button class="btn" id="shareBtn" type="button">다른 앱으로 보내기 (폴더 선택)</button>
+        <div id="saveMsg"></div>
+        <div class="acts"><button id="wideBack" type="button">다시 찍기</button><button id="wideSave" class="go" type="button">저장</button></div>
       </div>
     </div>
-
-    <div class="group">
-      <div class="sub"><h2>파일 이름 선택지</h2><button class="link" id="editLabels" type="button">편집</button></div>
-      <div class="chips" id="labels"></div>
-      <div class="addrow"><input type="text" id="newLabel" placeholder="새 선택지 추가" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
-    </div>
-
-    <div class="strip" id="strip"></div>
-    <button class="btn" id="shareBtn" type="button">다른 앱으로 보내기 (내 파일·드라이브에서 폴더 선택)</button>
-    <div id="saveMsg"></div>
   </section>
 
   <!-- crop panel -->
@@ -226,20 +246,17 @@ const DEFAULTS = {
   places: ["집","회사","헬스장"]
 };
 const FONTS = [
-  { f:"Black Han Sans", w:"400", n:"굵은 제목" },
-  { f:"Noto Sans KR", w:"900", n:"고딕" },
-  { f:"Do Hyeon", w:"400", n:"도현" },
-  { f:"Jua", w:"400", n:"주아" },
-  { f:"Gaegu", w:"700", n:"개구" },
-  { f:"Nanum Myeongjo", w:"800", n:"명조" },
+  { f:"Black Han Sans", w:"400", n:"굵은 글씨" },
   { f:"Nanum Pen Script", w:"400", n:"손글씨" },
 ];
 const COLORS = [
-  { fill:"#ffffff", stroke:"#000000", n:"흰색" },
   { fill:"#111111", stroke:"#ffffff", n:"검정" },
+  { fill:"#ffffff", stroke:"#000000", n:"흰색" },
   { fill:"#ffd400", stroke:"#000000", n:"노랑" },
   { fill:"#ff3b30", stroke:"#ffffff", n:"빨강" },
+  { fill:"#1F57C9", stroke:"#ffffff", n:"파랑" },
 ];
+const BLUE = 4;
 let lists = JSON.parse(JSON.stringify(DEFAULTS));
 let screen = "home";
 let src = null;          // working image (after optional crop/rotate)
@@ -247,11 +264,12 @@ let shotTime = new Date();
 let sel = { label: "", folder: "", tags: new Set(), place: "" };
 let ai = { labels: [], tags: [], pick: [], status: "", place: "", newPlaces: [], memos: [] };
 const edit = { labels:false, folders:false, tags:false, places:false };
-let ov = { text:"", x:.5, y:.75, moved:false };
-let st = { x:.5, y:.625 };
+let ov = { text:"", x:.5, y:.9, moved:false };
+let st = { x:.5, y:.82 };
+let color = BLUE;
 
 /* ---------- persistence (this phone only) ---------- */
-function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); if(lists.style.v !== 2){ lists.style.color = 1; lists.style.size = 13; lists.style.v = 2; } if(!Array.isArray(lists.places)) lists.places = DEFAULTS.places.slice(); } }catch(e){} }
+function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem("tagcam")||"null"); if(v){ lists = Object.assign({}, DEFAULTS, v); lists.style = Object.assign({}, DEFAULTS.style, v.style||{}); if(lists.style.v !== 2){ lists.style.color = 1; lists.style.size = 13; lists.style.v = 2; } if(!Array.isArray(lists.places)) lists.places = DEFAULTS.places.slice(); if(!FONTS.some(F => F.f === lists.style.font)) lists.style.font = FONTS[0].f; } }catch(e){} }
 function persist(){ try{ localStorage.setItem("tagcam", JSON.stringify(lists)); }catch(e){} }
 lsLoad();
 const getKey = () => { try{ return localStorage.getItem("tagcam_key")||""; }catch(e){ return ""; } };
@@ -283,8 +301,7 @@ function round2h(d){
 }
 const WD = ["일","월","화","수","목","금","토"];
 function round20(d){ const x = new Date(d.getTime()); const m = Math.round((x.getMinutes()+x.getSeconds()/60)/20)*20; x.setSeconds(0,0); x.setMinutes(0); x.setTime(x.getTime()+m*60000); return x; }
-function stampLines(d0){ const d = round20(d0); const h = d.getHours(), ap = h < 12 ? "오전" : "오후", h12 = h%12 === 0 ? 12 : h%12;
-  return [ (d.getMonth()+1)+"월 "+d.getDate()+"일 ("+WD[d.getDay()]+")", ap+" "+h12+":"+pad(d.getMinutes()) ]; }
+function stampLines(d0){ const d = round20(d0); return [ (d.getMonth()+1)+"/"+d.getDate()+"("+WD[d.getDay()]+") "+pad(d.getHours())+":"+pad(d.getMinutes()) ]; }
 const clean = s => String(s||"").trim().replace(/[\\/:*?"<>|\s]+/g,"-").replace(/^-+|-+$/g,"");
 function fileName(){
   const r = round2h(shotTime);
@@ -296,8 +313,8 @@ function fileName(){
 
 /* ---------- screens ---------- */
 function show(name){
-  if(name !== "edit" && typeof stopMic === "function") stopMic();
   screen = name;
+  document.body.classList.toggle("editing", name === "edit");
   $("sHome").hidden = name !== "home";
   $("sEdit").hidden = name !== "edit";
   $("sCrop").hidden = name !== "crop";
@@ -315,6 +332,14 @@ function show(name){
   window.scrollTo(0,0);
 }
 $("back").onclick = () => { if(screen === "crop") show("edit"); else show("home"); };
+$("topCancel").onclick = $("wideBack").onclick = () => show("home");
+$("topSave").onclick = $("wideSave").onclick = () => save();
+/* 전체화면 */
+(() => { const b = $("fsBtn"), de = document.documentElement;
+  const req = de.requestFullscreen || de.webkitRequestFullscreen, ex = document.exitFullscreen || document.webkitExitFullscreen;
+  if(!req){ b.hidden = true; return; }
+  b.onclick = async () => { try{ if(document.fullscreenElement || document.webkitFullscreenElement) await ex.call(document); else await req.call(de); }catch(e){} };
+})();
 $("next").onclick = () => { if(screen === "crop"){ applyCrop(); show("edit"); } else save(); };
 
 /* ---------- live camera ---------- */
@@ -357,8 +382,9 @@ $("shutter").onclick = async () => {
 };
 function startEdit(canvas){
   src = canvas;
-  sel = { label:"", folder:"", tags: new Set(), place:"" }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[] };
-  ov = { text:"", x:.5, y:.75, moved:false }; st = { x:.5, y:.625 }; $("ovText").value = "";
+  const lp = lists.lastPlace && lists.places.includes(lists.lastPlace) ? lists.lastPlace : "";
+  sel = { label:"", folder:"", tags: new Set(), place: lp }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[] };
+  ov = { text:"", x:.5, y:.9, moved:false }; st = { x:.5, y:.82, moved:false }; color = BLUE; $("ovText").value = ""; renderStyle();
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -384,7 +410,7 @@ $("cam").onchange = onFile; $("pick").onchange = onFile;
 /* ---------- overlay drawing ---------- */
 const fontOf = () => FONTS.find(x => x.f === lists.style.font) || FONTS[0];
 function fontSpec(px){ const F = fontOf(); return F.w + " " + px + "px \"" + F.f + "\", \"Noto Sans KR\", sans-serif"; }
-async function ensureFont(){ try{ const F = fontOf(); await document.fonts.load(F.w + " 40px \"" + F.f + "\"", ov.text || "가A1"); await document.fonts.load("400 40px \"Jua\"", "10월 2일 (금) 오후 8:40"); }catch(e){} }
+async function ensureFont(){ try{ const F = fontOf(); await document.fonts.load(F.w + " 40px \"" + F.f + "\"", ov.text || "가A1"); await document.fonts.load("400 40px \"Jua\"", "10/8(목) 14:40"); }catch(e){} }
 function drawOverlays(g, W, H){
   const base = Math.min(W, H);
   // date stamp block: date / time / place, cute font
@@ -394,14 +420,20 @@ function drawOverlays(g, W, H){
     g.font = "400 " + px + "px \"Jua\", \"Noto Sans KR\", sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
     g.lineJoin = "round"; g.lineWidth = Math.max(3, px*0.16); g.strokeStyle = "rgba(0,0,0,.8)"; g.fillStyle = "#ffffff";
     const L = stampLines(shotTime); if(sel.place) L.push(sel.place);
-    const lh = px*1.2, y0 = st.y*H - (L.length-1)*lh/2;
+    const lh = px*1.2;
+    if(!st.moved){ // 날짜는 아래쪽(0.82), 메모가 밑에 들어갈 자리가 없으면 위로 올림
+      st.y = .82; const t0 = ov.text.trim();
+      if(t0 && !ov.moved){ const mpx = Math.round(base * lists.style.size / 100), mh = t0.split(/\n/).length * mpx * 1.15;
+        const maxC = H - mpx*0.3 - mh - mpx*0.4 - (L.length-1)*lh/2 - px*0.6; st.y = Math.max(.1, Math.min(.82, maxC / H)); }
+    }
+    const y0 = st.y*H - (L.length-1)*lh/2;
     L.forEach((t,i) => { g.strokeText(t, st.x*W, y0 + i*lh); g.fillText(t, st.x*W, y0 + i*lh); });
     blockBottom = y0 + (L.length-1)*lh + px*0.6;
   }
   // memo: right under the stamp by default, draggable
   const t = ov.text.trim();
   if(t){
-    const C = COLORS[lists.style.color] || COLORS[0];
+    const C = COLORS[color] || COLORS[BLUE];
     const px = Math.round(base * lists.style.size / 100);
     const lines = t.split(/\n/); const lh = px * 1.15;
     if(!ov.moved){ ov.x = st.x; ov.y = Math.min(1 - (lines.length*lh/2 + px*0.3)/H, (blockBottom + px*0.4 + (lines.length*lh)/2) / H); }
@@ -413,7 +445,7 @@ function drawOverlays(g, W, H){
 }
 const view = $("view");
 /* ---------- frame (액자): blurred tone of the photo itself ---------- */
-const frameW = (W, H) => Math.max(12, Math.round(Math.min(W, H) * 0.10));
+const frameW = (W, H) => Math.max(24, Math.round(Math.min(W, H) * 0.20));
 function drawFrameBg(g, img, W, H, b){
   const TW = W + 2*b, TH = H + 2*b;
   // blurred, slightly dimmed copy of the photo fills the whole frame
@@ -466,43 +498,22 @@ view.addEventListener("pointerdown", e => {
   if(!items.length) return;
   const d = o => Math.hypot(o.x - p.x, o.y - p.y);
   const o = items.sort((a,b) => d(a) - d(b))[0];
-  if(o === ov) ov.moved = true;
+  if(o === ov) ov.moved = true; else st.moved = true;
   vdrag = { o, dx: p.x - o.x, dy: p.y - o.y }; view.setPointerCapture(e.pointerId); e.preventDefault();
 });
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
 view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
-/* 말로 메모: 버튼 누르면 시작, 다시 누르면 끝 */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let mic = null;
-function paintMic(){ const b = $("micBtn"); b.classList.toggle("on", !!mic); b.textContent = mic ? "■ 말하기 끝 (듣는 중)" : "🎤 말로 메모"; }
-function stopMic(){ const m = mic; mic = null; if(m) try{ m.rec.stop(); }catch(e){} paintMic(); }
-function startMic(){
-  if(!SR){ $("ovText").focus(); alert("이 브라우저는 음성 입력을 지원하지 않습니다. 키보드의 🎤 버튼을 쓰세요."); return; }
-  const rec = new SR(); rec.lang = "ko-KR"; rec.continuous = true; rec.interimResults = true;
-  mic = { rec, base: ov.text.trim() };
-  rec.onresult = e => {
-    if(!mic || mic.rec !== rec) return;
-    let said = ""; for(let i = 0; i < e.results.length; i++) said += e.results[i][0].transcript;
-    ov.text = [mic.base, said.trim()].filter(Boolean).join(" ").slice(0, 40);
-    $("ovText").value = ov.text; drawView(); render();
-  };
-  rec.onerror = e => { if(["not-allowed","service-not-allowed","audio-capture"].includes(e.error)){ mic = null; paintMic(); alert("마이크 권한이 꺼져 있습니다. 주소창 왼쪽 자물쇠 → 마이크 허용"); } };
-  rec.onend = () => { if(mic && mic.rec === rec){ mic.base = ov.text.trim(); try{ rec.start(); }catch(e){ mic = null; paintMic(); } } };
-  try{ rec.start(); }catch(e){ mic = null; paintMic(); return; }
-  paintMic();
-}
-$("micBtn").onclick = () => mic ? stopMic() : startMic();
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
-COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
+COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; renderStyle(); drawView(); }; $("colors").appendChild(b); });
 $("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); };
 $("ovSize").onchange = persist;
 $("stSize").oninput = () => { lists.style.stamp = +$("stSize").value; $("stSizeVal").textContent = lists.style.stamp; drawView(); };
 $("stSize").onchange = persist;
 function renderStyle(){
   [...$("fonts").children].forEach(b => b.classList.toggle("on", b.dataset.f === lists.style.font));
-  [...$("colors").children].forEach((b,i) => b.classList.toggle("on", i === lists.style.color));
+  [...$("colors").children].forEach((b,i) => b.classList.toggle("on", i === color));
   if(lists.style.size < 5 || lists.style.size > 15) lists.style.size = 10;
   if(!(lists.style.stamp >= 5 && lists.style.stamp <= 15)) lists.style.stamp = 10;
   $("ovSize").value = lists.style.size; $("ovSizeVal").textContent = lists.style.size;
@@ -746,7 +757,7 @@ function withMeta(jpeg, meta){ // jpeg: Uint8Array
   out.set([0xFF,0xD8]); out.set(ex,2); out.set(xm,2+ex.length); out.set(rest,2+ex.length+xm.length);
   return out;
 }
-window.__tagcam = { withMeta, round2h };
+window.__tagcam = { withMeta, round2h, stampLines };
 
 
 /* ---------- save ---------- */
@@ -755,6 +766,7 @@ async function buildFile(){
   if(sel.label && !lists.labels.includes(sel.label)) lists.labels.push(sel.label);
   sel.tags.forEach(t => { if(!lists.tags.includes(t)) lists.tags.push(t); });
   if(sel.place && !lists.places.includes(sel.place)) lists.places.push(sel.place);
+  lists.lastPlace = sel.place || "";
   await ensureFont();
   const b = frameW(src.width, src.height);
   const out = document.createElement("canvas"); out.width = src.width + 2*b; out.height = src.height + 2*b;
@@ -777,8 +789,7 @@ function done(text){
   box.onclick = close; doneTimer = setTimeout(close, 2000);
 }
 async function save(){
-  stopMic();
-  if(!src) return;
+  if(!src || $("next").disabled) return;
   $("next").disabled = true;
   await buildFile();
   const a = document.createElement("a"); a.href = URL.createObjectURL(new File([lastBlob], lastName, {type:"image/jpeg"})); a.download = lastName; a.rel = "noopener";
