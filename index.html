@@ -105,6 +105,12 @@ textarea{resize:none}
 }
 .strip{background:var(--strip);color:var(--strip-fg);border-radius:8px;padding:12px 14px;font:700 15px/1.4 var(--f-mono);word-break:break-all}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+#sEdit .chip{padding:4px 10px;font-size:13px}
+#sEdit .fld{display:flex;flex-direction:column;gap:6px}
+#sEdit .lbl{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+#sEdit .fname{font:500 12px var(--f-mono);color:var(--muted);word-break:break-all}
+body.editing .bar{display:none!important}
+.stR .acts{display:flex!important}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:7px 13px;font-size:14px;display:inline-flex;align-items:center;gap:6px}
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .chip.ai{border-style:dashed;border-color:var(--accent);color:var(--accent)}
@@ -144,6 +150,10 @@ textarea{resize:none}
 .done{position:fixed;inset:0;z-index:50;background:rgba(10,12,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 16px;animation:fin .25s ease-out}
 .done img{max-width:100%;max-height:72vh;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .done p{color:#fff;font:500 13px var(--f-mono);margin:0;text-align:center;word-break:break-all}
+.done .dbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.done .tolog{border:0;border-radius:999px;padding:11px 20px;font:700 15px var(--f-body);background:#fff;color:#111}
+.done .tolog.more{background:#1F57C9;color:#fff}
+.done img{max-height:64vh}
 .done .bar5{width:min(320px,80%);height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
 .done .bar5 i{display:block;height:100%;background:#fff;animation:shrink 2s linear forwards}
 @keyframes shrink{from{width:100%}to{width:0}}
@@ -188,15 +198,15 @@ textarea{resize:none}
         <h2><label for="ovText">메모 (사진 위에 들어감)</label></h2>
         <input type="text" id="ovText" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점" enterkeyhint="done">
         <div class="chips" id="memos"></div>
-        <div class="group">
-          <div class="sub"><h2>장소</h2><button class="link" id="editPlaces" type="button">편집</button></div>
+        <div class="fld">
+          <div class="sub"><span class="lbl">장소</span><button class="link" id="editPlaces" type="button">편집</button></div>
           <div class="chips" id="places"></div>
-          <div class="addrow"><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
+          <div class="addrow" id="placeAdd" hidden><input type="text" id="newPlace" placeholder="새 장소 (예: 거래처 사무실)" maxlength="20"><button class="btn" id="addPlace" type="button">추가</button></div>
         </div>
-        <div class="group">
-          <div class="sub"><h2>파일 이름 선택지</h2><button class="link" id="editLabels" type="button">편집</button></div>
+        <div class="fld">
+          <div class="sub"><span class="lbl">파일 이름</span><button class="link" id="editLabels" type="button">편집</button></div>
           <div class="chips" id="labels"></div>
-          <div class="addrow"><input type="text" id="newLabel" placeholder="새 선택지 추가" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
+          <div class="addrow" id="labelAdd" hidden><input type="text" id="newLabel" placeholder="새 선택지" maxlength="30"><button class="btn" id="addLabel" type="button">추가</button></div>
         </div>
       </div>
       <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
@@ -209,10 +219,9 @@ textarea{resize:none}
           <button class="btn" id="toCrop" type="button">자르기·회전</button>
           <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·장소 넣기</label>
         </div>
-        <div class="strip" id="strip"></div>
-        <button class="btn" id="shareBtn" type="button">다른 앱으로 보내기 (폴더 선택)</button>
+        <div class="fname" id="strip"></div>
         <div id="saveMsg"></div>
-        <div class="acts"><button id="wideBack" type="button">다시 찍기</button><button id="wideSave" class="go" type="button">저장</button></div>
+        <div class="acts"><button id="rawSave" type="button">표시 없이</button><button id="wideSave" class="go" type="button">저장</button></div>
       </div>
     </div>
   </section>
@@ -332,7 +341,8 @@ function show(name){
   window.scrollTo(0,0);
 }
 $("back").onclick = () => { if(screen === "crop") show("edit"); else show("home"); };
-$("topCancel").onclick = $("wideBack").onclick = () => show("home");
+$("topCancel").onclick = () => show("home");
+$("rawSave").onclick = () => save(true);
 $("topSave").onclick = $("wideSave").onclick = () => save();
 /* 전체화면 */
 (() => { const b = $("fsBtn"), de = document.documentElement;
@@ -657,12 +667,14 @@ function render(){
     ai.labels.forEach(l => L.appendChild(chip("✦ "+l,{aiCls:true,on:sel.label===l,onClick:()=>{ sel.label = sel.label===l?"":l; render(); }})));
     [...(ai.pick||[]), ...lists.labels.filter(l=>!picked.has(l))].forEach(l => L.appendChild(chip((picked.has(l)?"✦ ":"")+l,{on:sel.label===l,onClick:()=>{ sel.label = sel.label===l?"":l; render(); }})));
   }
+  if(!edit.labels){ L.appendChild(chip("+ 직접", {onClick: () => { $("labelAdd").hidden = !$("labelAdd").hidden; if(!$("labelAdd").hidden) $("newLabel").focus(); }})); }
   $("editLabels").textContent = edit.labels ? "완료" : "편집";
   const P = $("places"); P.innerHTML = "";
   lists.places.forEach(pl => P.appendChild(chip((ai.place===pl && !edit.places ? "✦ " : "") + pl, { on: !edit.places && sel.place===pl, removable: edit.places, onClick: () => {
     if(edit.places){ lists.places = lists.places.filter(x=>x!==pl); if(sel.place===pl) sel.place=""; persist(); }
     else sel.place = sel.place===pl ? "" : pl; render(); drawView(); } })));
   if(!edit.places) ai.newPlaces.forEach(pl => P.appendChild(chip("✦ "+pl, { aiCls:true, on: sel.place===pl, onClick: () => { sel.place = sel.place===pl ? "" : pl; render(); drawView(); } })));
+  if(!edit.places){ const pa = chip("+ 직접", {onClick: () => { $("placeAdd").hidden = !$("placeAdd").hidden; if(!$("placeAdd").hidden) $("newPlace").focus(); }}); P.appendChild(pa); }
   $("editPlaces").textContent = edit.places ? "완료" : "편집";
   const M = $("memos"); M.innerHTML = "";
   ai.memos.forEach(m => M.appendChild(chip("✦ "+m, { aiCls:true, on: ov.text.trim()===m, onClick: () => { ov.text = ov.text.trim()===m ? "" : m; $("ovText").value = ov.text; drawView(); render(); } })));
@@ -686,8 +698,8 @@ function addTo(key, input, after){
   if(!lists[key].includes(v)) lists[key].push(v);
   $(input).value = ""; after(v); persist(); render();
 }
-$("addLabel").onclick = () => addTo("labels","newLabel", v => sel.label = v);
-$("addPlace").onclick = () => { addTo("places","newPlace", v => sel.place = v); drawView(); };
+$("addLabel").onclick = () => { addTo("labels","newLabel", v => sel.label = v); $("labelAdd").hidden = true; };
+$("addPlace").onclick = () => { addTo("places","newPlace", v => sel.place = v); $("placeAdd").hidden = true; drawView(); };
 $("editPlaces").onclick = () => { edit.places = !edit.places; render(); };
 [["newLabel","addLabel"],["newPlace","addPlace"]].forEach(([i,b]) => $(i).addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); $(b).click(); } }));
 $("editLabels").onclick = () => { edit.labels = !edit.labels; render(); };
@@ -762,15 +774,15 @@ window.__tagcam = { withMeta, round2h, stampLines };
 
 /* ---------- save ---------- */
 let lastBlob = null, lastName = "";
-async function buildFile(){
+async function buildFile(raw){
   if(sel.label && !lists.labels.includes(sel.label)) lists.labels.push(sel.label);
   sel.tags.forEach(t => { if(!lists.tags.includes(t)) lists.tags.push(t); });
   if(sel.place && !lists.places.includes(sel.place)) lists.places.push(sel.place);
   lists.lastPlace = sel.place || "";
   await ensureFont();
-  const b = frameW(src.width, src.height);
-  const out = document.createElement("canvas"); out.width = src.width + 2*b; out.height = src.height + 2*b;
-  compose(out.getContext("2d"), src, src.width, src.height, b);
+  const out = document.createElement("canvas");
+  if(raw){ out.width = src.width; out.height = src.height; out.getContext("2d").drawImage(src, 0, 0); }
+  else { const b = frameW(src.width, src.height); out.width = src.width + 2*b; out.height = src.height + 2*b; compose(out.getContext("2d"), src, src.width, src.height, b); }
   const jpg = await new Promise(r => out.toBlob(r, "image/jpeg", 0.92));
   const name = fileName();
   const meta = { date: shotTime, title: name.replace(/\.jpg$/,""), folder: sel.folder||"", tags:[...sel.tags] };
@@ -779,34 +791,34 @@ async function buildFile(){
   persist();
 }
 let doneTimer = null;
+async function shareLast(){
+  const file = new File([lastBlob], lastName, {type:"image/jpeg"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({ files:[file], title:lastName }); return "보냈습니다"; }catch(e){ return e && e.name === "AbortError" ? "" : "보내지 못했습니다"; } }
+  return "이 브라우저는 보내기를 지원하지 않습니다";
+}
 function done(text){
   const box = document.createElement("div"); box.className = "done"; box.setAttribute("role","status");
   const img = document.createElement("img"); img.alt = "완성된 사진"; img.src = URL.createObjectURL(lastBlob);
   const p = document.createElement("p"); p.textContent = text;
   const bar = document.createElement("div"); bar.className = "bar5"; bar.appendChild(document.createElement("i"));
-  box.append(img, p, bar); document.body.appendChild(box);
   const close = () => { clearTimeout(doneTimer); if(box.parentNode){ box.remove(); URL.revokeObjectURL(img.src); show("home"); } };
+  const btns = document.createElement("div"); btns.className = "dbtns";
+  const sh = document.createElement("button"); sh.type = "button"; sh.className = "tolog"; sh.textContent = "다른 앱으로 보내기";
+  sh.onclick = async ev => { ev.stopPropagation(); clearTimeout(doneTimer); bar.remove(); const r = await shareLast(); if(r) sh.textContent = r; sh.onclick = e2 => { e2.stopPropagation(); close(); }; };
+  const more = document.createElement("button"); more.type = "button"; more.className = "tolog more"; more.textContent = "📷 한 장 더";
+  more.onclick = ev => { ev.stopPropagation(); close(); };
+  btns.append(sh, more);
+  box.append(img, p, btns, bar); document.body.appendChild(box);
   box.onclick = close; doneTimer = setTimeout(close, 2000);
 }
-async function save(){
+async function save(raw){
   if(!src || $("next").disabled) return;
   $("next").disabled = true;
-  await buildFile();
+  await buildFile(raw);
   const a = document.createElement("a"); a.href = URL.createObjectURL(new File([lastBlob], lastName, {type:"image/jpeg"})); a.download = lastName; a.rel = "noopener";
   document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 4000);
-  done("저장했습니다: 다운로드 폴더 / " + lastName);
+  done("저장했습니다: 다운로드 / " + lastName);
 }
-$("shareBtn").onclick = async () => {
-  if(!src) return;
-  await buildFile();
-  const file = new File([lastBlob], lastName, {type:"image/jpeg"});
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({ files:[file], title:lastName }); done("보냈습니다: " + lastName); }
-    catch(e){ if(e && e.name !== "AbortError"){ $("saveMsg").innerHTML = '<p class="msg err">보내지 못했습니다. 아래 저장 버튼을 쓰세요.</p>'; } }
-  } else {
-    $("saveMsg").innerHTML = '<p class="msg err">이 브라우저는 다른 앱으로 보내기를 지원하지 않습니다. 아래 저장 버튼을 쓰세요.</p>';
-  }
-};
 
 show("home");
 })();
