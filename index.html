@@ -215,8 +215,8 @@ body.editing .bar{display:none!important}
     <div class="sthead"><h2>사진 위 표시</h2><button class="go" id="topSave" type="button">저장</button><button class="btn" id="topCancel" type="button">취소</button></div>
     <div class="stgrid">
       <div class="stL">
-        <h2><label for="ovText">메모 (사진 위에 들어감)</label></h2>
-        <input type="text" id="ovText" maxlength="40" placeholder="떠올릴 내용, 할 일, 고칠 점" enterkeyhint="done">
+        <div style="display:flex;align-items:center;gap:8px"><h2 style="flex:1"><label for="ovText">메모 (사진 위에 들어감)</label></h2><button class="btn" id="ovNl" type="button" style="padding:5px 12px;font-weight:700">↵ 줄바꿈</button></div>
+        <textarea id="ovText" rows="2" maxlength="80" placeholder="떠올릴 내용, 할 일, 고칠 점&#10;(엔터·↵ 버튼으로 줄바꿈)" enterkeyhint="enter"></textarea>
         <div class="chips" id="memos"></div>
         <div class="fld">
           <div class="sub"><span class="lbl">주제</span><button class="link" id="editTopics" type="button">편집</button></div>
@@ -559,6 +559,8 @@ view.addEventListener("pointerdown", e => {
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
 view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
 $("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
+$("ovNl").onpointerdown = e => e.preventDefault();
+$("ovNl").onclick = () => { const n = $("ovText"); if(n.value.length >= 80) return; const a0 = n.selectionStart ?? n.value.length, z = n.selectionEnd ?? a0; n.value = n.value.slice(0,a0) + "\n" + n.value.slice(z); n.selectionStart = n.selectionEnd = a0 + 1; n.focus(); ov.text = n.value; drawView(); render(); };
 $("stampOn").onchange = drawView;
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
