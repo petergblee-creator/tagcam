@@ -71,7 +71,7 @@ button{font:inherit;cursor:pointer}
 .btn:focus-visible,.chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 textarea,input[type=text]{font:15px var(--f-body);padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-width:0}
 textarea{resize:none}
-.lsz{display:flex;flex-direction:column;gap:4px}.lsz:empty{display:none}.lsz .r{display:flex;align-items:center;gap:6px;font-size:13px}.lsz .r span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}.lsz .r b{width:44px;text-align:center;font-variant-numeric:tabular-nums}.lsz .r button{padding:3px 12px}
+.lsz{display:flex;flex-direction:column;gap:4px}.lsz:empty{display:none}.lsz .r{display:flex;align-items:center;gap:6px;font-size:13px}.lsz .r span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}.lsz .r b{width:44px;text-align:center;font-variant-numeric:tabular-nums}.lsz .r button{padding:3px 8px;flex:0 0 auto}
 .fonts{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .fonts button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:4px 10px;font-size:17px;line-height:1.3}
 .fonts button.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
@@ -90,6 +90,9 @@ textarea{resize:none}
 .stgrid{display:flex;flex-direction:column;gap:12px}
 .stgrid .photo{order:-1}
 .stL,.stR{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stL>*,.stR>*{flex-shrink:0}
+#ovText{min-height:64px;line-height:1.4}
+.mlbl{font-size:11px;color:var(--muted);margin:2px 0 -4px}
 .stR .acts{display:none;gap:8px}
 .stR .acts button{flex:1;white-space:nowrap;border-radius:10px;padding:11px;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
 .stR .acts button.go{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);flex:2}
@@ -98,10 +101,10 @@ textarea{resize:none}
   body.editing{padding-bottom:12px}
   body.editing .bar{display:none!important}
   body.editing .wrap{max-width:1280px;padding-block:10px;gap:10px}
-  .stgrid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:14px}
+  .stgrid{display:grid;grid-template-columns:minmax(260px,1fr) auto minmax(230px,1fr);align-items:start;gap:16px}
   .stgrid .photo{order:0}
   .stgrid .photo canvas{max-height:min(78vh,720px);max-width:44vw}
-  .stL,.stR{max-height:calc(100vh - 110px);overflow:auto}
+  .stL,.stR{max-height:calc(100vh - 110px);overflow:auto;padding:2px 8px 12px 2px;scrollbar-gutter:stable}
   .stR .acts{display:flex}
 }
 .strip{background:var(--strip);color:var(--strip-fg);border-radius:8px;padding:12px 14px;font:700 15px/1.4 var(--f-mono);word-break:break-all}
@@ -216,7 +219,7 @@ body.editing .bar{display:none!important}
     <div class="sthead"><h2>사진 위 표시</h2><button class="go" id="topSave" type="button">저장</button><button class="btn" id="topCancel" type="button">취소</button></div>
     <div class="stgrid">
       <div class="stL">
-        <div style="display:flex;align-items:center;gap:8px"><h2 style="flex:1"><label for="ovText">메모 (사진 위에 들어감)</label></h2><button class="btn" id="ovNl" type="button" style="padding:5px 12px;font-weight:700">↵ 줄바꿈</button></div>
+        <div style="display:flex;align-items:center;gap:8px"><h2 style="flex:1"><label for="ovText">사진 위 메모</label></h2><button class="btn" id="ovNl" type="button" style="padding:5px 12px;font-weight:700">↵ 줄바꿈</button></div>
         <textarea id="ovText" rows="2" maxlength="80" placeholder="떠올릴 내용, 할 일, 고칠 점&#10;(엔터·↵ 버튼으로 줄바꿈)" enterkeyhint="enter"></textarea>
         <div class="chips" id="memos"></div>
         <div id="lineSz" class="lsz"></div>
@@ -243,7 +246,7 @@ body.editing .bar{display:none!important}
         <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
         <div class="colfont"><div class="colors" id="colors"></div><div class="fonts" id="fonts"></div></div>
         <div class="row">
-          <button class="btn" id="toCrop" type="button">자르기·회전</button>
+          <button class="btn" id="toCrop" type="button">자르기·회전</button><button class="btn" id="posReset" type="button">위치·줄 크기 처음대로</button>
           <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·장소 넣기</label>
         </div>
         <div class="fname" id="strip"></div>
@@ -440,11 +443,14 @@ $("shutter").onclick = async () => {
   const c = document.createElement("canvas"); c.width = sw; c.height = sh;
   c.getContext("2d").drawImage(video, (vw-sw)/2, (vh-sh)/2, sw, sh, 0, 0, sw, sh); startEdit(c);
 };
+/* 직전에 바꾼 위치·줄 크기·날짜 넣기를 다음 사진에도 그대로 (기본값으로 돌아가지 않음) */
+function keepPos(){ lists.style.pos = { st: { x: st.x, y: st.y, moved: !!st.moved }, ov: { x: ov.x, y: ov.y, moved: !!ov.moved }, lsz: (ov.lsz||[]).slice() }; lists.style.stampOn = $("stampOn").checked; persist(); }
+function fitTa(){ const n = $("ovText"); if(!n) return; n.style.height = "auto"; n.style.height = Math.min(n.scrollHeight + 2, 160) + "px"; }
 function startEdit(canvas){
   src = canvas;
   const lp = lists.lastPlace && lists.places.includes(lists.lastPlace) ? lists.lastPlace : "";
   sel = { label:"", folder:"", tags: new Set(), place: lp, topic: "" }; ai = { labels:[], tags:[], pick:[], status:"", place:"", newPlaces:[], memos:[], topic:"" };
-  ov = { text:"", x:.5, y:.9, moved:false, lsz:[] }; st = { x:.5, y:.82, moved:false }; color = savedColor(); $("ovText").value = ""; renderStyle();
+  const P = lists.style.pos || {}; ov = { text:"", x: P.ov?.x ?? .5, y: P.ov?.y ?? .9, moved: !!P.ov?.moved, lsz: (P.lsz||[]).slice() }; st = { x: P.st?.x ?? .5, y: P.st?.y ?? .82, moved: !!P.st?.moved }; $("stampOn").checked = lists.style.stampOn !== false; color = savedColor(); $("ovText").value = ""; fitTa(); renderStyle();
   stopCam(); show("edit"); analyze();
 }
 function loadBlob(b){
@@ -561,19 +567,21 @@ view.addEventListener("pointerdown", e => {
   vdrag = { o, dx: p.x - o.x, dy: p.y - o.y }; view.setPointerCapture(e.pointerId); e.preventDefault();
 });
 view.addEventListener("pointermove", e => { if(vdrag) moveItem(e); });
-view.addEventListener("pointerup", () => vdrag = null); view.addEventListener("pointercancel", () => vdrag = null);
+view.addEventListener("pointerup", () => { if(vdrag) keepPos(); vdrag = null; }); view.addEventListener("pointercancel", () => { if(vdrag) keepPos(); vdrag = null; });
 function paintLsz(){
   const el = $("lineSz"); if(!el) return; const ls = ov.text.split(/\n/);
   if(ls.filter(x => x.trim()).length < 2){ el.innerHTML = ""; return; }
   el.innerHTML = ls.map((l,i) => l.trim() ? `<div class="r"><span>${i+1}줄 · ${l.trim().replace(/[&<>]/g,"")}</span><button class="btn" type="button" data-lz="${i}" data-d="-1">작게</button><b>${Math.round((+(ov.lsz||[])[i]||1)*100)}%</b><button class="btn" type="button" data-lz="${i}" data-d="1">크게</button></div>` : "").join("");
-  el.querySelectorAll("[data-lz]").forEach(b => b.onclick = () => { const i = +b.dataset.lz, cur = +(ov.lsz||[])[i] || 1; let k = LSZ.indexOf(cur); if(k < 0) k = 2; k = Math.max(0, Math.min(LSZ.length-1, k + +b.dataset.d)); ov.lsz = ov.lsz || []; ov.lsz[i] = LSZ[k]; paintLsz(); drawView(); });
+  el.querySelectorAll("[data-lz]").forEach(b => b.onclick = () => { const i = +b.dataset.lz, cur = +(ov.lsz||[])[i] || 1; let k = LSZ.indexOf(cur); if(k < 0) k = 2; k = Math.max(0, Math.min(LSZ.length-1, k + +b.dataset.d)); ov.lsz = ov.lsz || []; ov.lsz[i] = LSZ[k]; keepPos(); paintLsz(); drawView(); });
 }
-$("ovText").oninput = () => { ov.text = $("ovText").value; drawView(); render(); };
+$("ovText").oninput = () => { ov.text = $("ovText").value; fitTa(); drawView(); render(); };
 $("ovNl").onpointerdown = e => e.preventDefault();
-$("ovNl").onclick = () => { const n = $("ovText"); if(n.value.length >= 80) return; const a0 = n.selectionStart ?? n.value.length, z = n.selectionEnd ?? a0; n.value = n.value.slice(0,a0) + "\n" + n.value.slice(z); n.selectionStart = n.selectionEnd = a0 + 1; n.focus(); ov.text = n.value; drawView(); render(); };
-$("stampOn").onchange = drawView;
+$("ovNl").onclick = () => { const n = $("ovText"); if(n.value.length >= 80) return; const a0 = n.selectionStart ?? n.value.length, z = n.selectionEnd ?? a0; n.value = n.value.slice(0,a0) + "\n" + n.value.slice(z); n.selectionStart = n.selectionEnd = a0 + 1; n.focus(); ov.text = n.value; fitTa(); drawView(); render(); };
+$("stampOn").onchange = () => { keepPos(); drawView(); };
+$("posReset").onclick = () => { st = { x:.5, y:.82, moved:false }; ov.x = .5; ov.y = .9; ov.moved = false; ov.lsz = []; keepPos(); paintLsz(); drawView(); };
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
+$("ovSize").onchange = $("stSize").onchange = () => persist();
 $("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); render(); };
 $("ovSize").onchange = persist;
 $("stSize").oninput = () => { lists.style.stamp = +$("stSize").value; $("stSizeVal").textContent = lists.style.stamp; drawView(); };
@@ -742,10 +750,12 @@ function render(){
   if(!edit.places){ const pa = chip("+ 직접", {onClick: () => { $("placeAdd").hidden = !$("placeAdd").hidden; if(!$("placeAdd").hidden) $("newPlace").focus(); }}); P.appendChild(pa); }
   $("editPlaces").textContent = edit.places ? "완료" : "편집";
   const M = $("memos"); M.innerHTML = "";
-  const setMemo = m => { ov.text = ov.text.trim()===m ? "" : m; ov.lsz = []; $("ovText").value = ov.text; drawView(); render(); };
+  const setMemo = m => { ov.text = ov.text.trim()===m ? "" : m; $("ovText").value = ov.text; fitTa(); drawView(); render(); };
+  if(ai.memos.length){ const h = document.createElement("div"); h.className = "mlbl"; h.style.width = "100%"; h.textContent = "✦ 사진 보고 추천"; M.appendChild(h); }
   ai.memos.forEach(m => M.appendChild(chip("✦ "+m, { aiCls:true, on: ov.text.trim()===m, onClick: () => setMemo(m) })));
   // 자주 쓰는 메모: 저장해 두고 한 번에 넣기 (편집에서 ×로 삭제)
   if(!Array.isArray(lists.memos)) lists.memos = [];
+  { const h = document.createElement("div"); h.className = "mlbl"; h.style.width = "100%"; h.textContent = "★ 내 메모 (기록장과 같이 씀)"; M.appendChild(h); }
   lists.memos.forEach(m => M.appendChild(chip("★ " + m.replace(/\n/g," / "), { on: !edit.memos && ov.text.trim()===m, removable: edit.memos, onClick: () => {
     if(edit.memos){ lists.memos = lists.memos.filter(x => x!==m); persist(); render(); } else setMemo(m); } })));
   if(!edit.memos){ const cur = ov.text.trim(); M.appendChild(chip("☆ 지금 메모 저장", { onClick: () => {
@@ -898,6 +908,7 @@ function done(text){
   box.onclick = close; doneTimer = setTimeout(close, 2000);
 }
 async function save(raw){
+  keepPos();
   if(!src || $("next").disabled) return;
   $("next").disabled = true;
   await buildFile(raw);
@@ -968,7 +979,7 @@ $("lsGo").onclick = async () => {
   try{
     const items = []; for(const x of pick) items.push({ name: x.name, at: x.at, topic: x.topic, place: x.place, memo: x.memo, label: x.label, jpg: await b64(x.blob) });
     const now = new Date(), fn = "기록장으로_" + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + "_" + pad(now.getHours()) + pad(now.getMinutes()) + "_" + items.length + "장.json";
-    const blob = new Blob([JSON.stringify({ app: "tagcam", v: 1, made: now.getTime(), items })], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ app: "tagcam", v: 1, made: now.getTime(), items, memos: lists.memos || [] })], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fn; a.rel = "noopener"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 8000);
     for(const x of pick){ x.sent = Date.now(); await shotDB.put(x); }
     $("lsSend").innerHTML = '<div class="sendbox"><b>' + items.length + '장을 파일 1개로 받았습니다.</b><br>기록장 → <b>사진·영상</b> → 사진·영상 고르기에서 방금 받은 <b>' + fn.replace(/&/g,"&amp;").replace(/</g,"&lt;") + '</b> 하나만 고르면 주제·메모·장소가 그대로 들어갑니다.<br><a href="' + LOG_URL + '#tagcam" target="_blank" rel="noopener">기록장 열기</a></div>';
@@ -978,11 +989,12 @@ $("lsGo").onclick = async () => {
 
 /* ---------- 기록장 주제 맞추기: #topics=["운동",...] 로 열리면 주제 칩을 그대로 바꿈 ---------- */
 (() => {
-  const m = location.hash.match(/topics=([^&]*)/); if(!m) return;
-  try{
+  const m = location.hash.match(/topics=([^&]*)/);
+  if(m) try{
     const t = JSON.parse(decodeURIComponent(m[1]));
     if(Array.isArray(t)){ const v = [...new Set(t.map(clean).filter(Boolean))].slice(0, 30); if(v.length){ lists.topics = v; persist(); setTimeout(() => toast("기록장 주제 " + v.length + "개로 맞췄습니다: " + v.join(" · "), 3500), 400); } }
   }catch(e){}
+  try{ const mm = location.hash.match(/memos=([^&]*)/); if(mm){ const v = JSON.parse(decodeURIComponent(mm[1])); if(Array.isArray(v)){ lists.memos = [...new Set(v.map(x => String(x).trim()).filter(Boolean))].slice(0, 12); persist(); setTimeout(() => toast("기록장 ★ 메모 " + lists.memos.length + "개로 맞췄습니다", 3000), 900); } } }catch(e){}
   try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
 })();
 
