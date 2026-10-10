@@ -106,6 +106,15 @@ textarea{resize:none}
   .stgrid .photo canvas{max-height:min(78vh,720px);max-width:44vw}
   .stL,.stR{max-height:calc(100vh - 110px);overflow:auto;padding:2px 8px 12px 2px;scrollbar-gutter:stable}
   .stR .acts{display:flex}
+  .stgrid{grid-template-columns:minmax(200px,1fr) minmax(0,auto) minmax(200px,1fr)}
+  .stgrid .photo canvas{max-width:100%}
+}
+/* 폴드 펼침(640~1099px): 사진 왼쪽 · 설정은 오른쪽 한 열 → 가로 스크롤 없음 */
+@media (min-width:640px) and (max-width:1099px){
+  .stgrid{grid-template-columns:minmax(0,1.25fr) minmax(210px,1fr)}
+  .stgrid .photo{grid-column:1;grid-row:1 / span 2}
+  .stgrid .stL{grid-column:2;grid-row:1;max-height:none}
+  .stgrid .stR{grid-column:2;grid-row:2;max-height:none}
 }
 .strip{background:var(--strip);color:var(--strip-fg);border-radius:8px;padding:12px 14px;font:700 15px/1.4 var(--f-mono);word-break:break-all}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
