@@ -163,6 +163,13 @@ body.editing .bar{display:none!important}
 @keyframes shrink{from{width:100%}to{width:0}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.done{animation:none}}
+details.fold{border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+details.fold>summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--muted)}
+details.fold[open]{display:flex;flex-direction:column;gap:8px}
+details.fold[open]>summary{margin-bottom:4px}
+.szrow{display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
+.szrow b{min-width:22px;text-align:center}
+.szrow button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--surface,#fff);color:inherit;font-size:15px;padding:0}
 .fnopts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
 .fnopts .chip{padding:3px 9px;font-size:12px}
 #sList .lbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
@@ -223,11 +230,11 @@ body.editing .bar{display:none!important}
         <textarea id="ovText" rows="2" maxlength="80" placeholder="떠올릴 내용, 할 일, 고칠 점&#10;(엔터·↵ 버튼으로 줄바꿈)" enterkeyhint="enter"></textarea>
         <div class="chips" id="memos"></div>
         <div id="lineSz" class="lsz"></div>
-        <div class="fld">
+        <details class="fold" id="topicFold"><summary>주제 · <span id="topicSum">자동</span></summary>
           <div class="sub"><span class="lbl">주제</span><button class="link" id="editTopics" type="button">편집</button></div>
           <div class="chips" id="topics"></div>
           <div class="addrow" id="topicAdd" hidden><input type="text" id="newTopic" placeholder="새 주제 (예: 독서)" maxlength="12"><button class="btn" id="addTopic" type="button">추가</button></div>
-        </div>
+        </details>
         <div class="fld">
           <div class="sub"><span class="lbl">장소</span><button class="link" id="editPlaces" type="button">편집</button></div>
           <div class="chips" id="places"></div>
@@ -242,15 +249,15 @@ body.editing .bar{display:none!important}
       <div class="photo" id="photo"><canvas id="view"></canvas><span class="tip" id="tip">날짜·메모를 끌어서 이동</span></div>
       <div class="stR">
         <div class="ai-state" id="aiState"></div>
-        <div class="sizer"><span>메모 크기</span><input type="range" id="ovSize" min="5" max="15" value="13"><span id="ovSizeVal">13</span></div>
-        <div class="sizer"><span>날짜 크기</span><input type="range" id="stSize" min="5" max="15" value="10"><span id="stSizeVal">10</span></div>
-        <div class="colfont"><div class="colors" id="colors"></div><div class="fonts" id="fonts"></div></div>
         <div class="row">
           <button class="btn" id="toCrop" type="button">자르기·회전</button><button class="btn" id="posReset" type="button">위치 처음대로</button>
-          <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜·장소 넣기</label>
+          <label class="toggle" for="stampOn"><input type="checkbox" id="stampOn" checked> 날짜</label>
         </div>
+        <details class="fold" id="styFold"><summary>글씨 · 색 · 크기</summary>
+          <div class="szrow"><span>메모</span><button type="button" data-sz="size" data-d="-1" aria-label="메모 작게">−</button><b id="ovSizeVal">13</b><button type="button" data-sz="size" data-d="1" aria-label="메모 크게">+</button><span style="margin-left:8px">날짜</span><button type="button" data-sz="stamp" data-d="-1" aria-label="날짜 작게">−</button><b id="stSizeVal">10</b><button type="button" data-sz="stamp" data-d="1" aria-label="날짜 크게">+</button></div>
+          <div class="colfont"><div class="colors" id="colors"></div><div class="fonts" id="fonts"></div></div>
+        </details>
         <div class="fname" id="strip"></div>
-        <div class="fnopts" id="fnOpts"></div>
         <div id="saveMsg"></div>
         <div class="acts"><button id="rawSave" type="button">표시 없이</button><button id="wideSave" class="go" type="button">저장</button></div>
       </div>
@@ -365,7 +372,7 @@ function fileName(){
   const label = clean(sel.label);
   const memo = clean(ov.text).slice(0, 24), place = clean(sel.place);
   const topic = clean(sel.topic);
-  const F = lists.fn || DEFAULTS.fn;
+  const F = {topic: true, label: true, place: true, memo: true};  // 파일 이름엔 주제·이름·장소·메모 모두
   let n = r.getFullYear()+pad(r.getMonth()+1)+pad(r.getDate()) + "_" + pad(r.getHours())+"00" + (F.topic && topic ? "_" + topic : "") + (F.label && label ? "_" + label : "") + (F.place && place ? "_" + place : "") + (F.memo && memo ? "_" + memo : "");
   return n + ".jpg";
 }
@@ -581,18 +588,15 @@ $("stampOn").onchange = () => { keepPos(); drawView(); };
 $("posReset").onclick = () => { st = { x:.5, y:.82, moved:false }; ov.x = .5; ov.y = .9; ov.moved = false; ov.lsz = []; keepPos(); paintLsz(); drawView(); };
 FONTS.forEach(F => { const b = document.createElement("button"); b.type = "button"; b.textContent = F.n; b.style.fontFamily = "\"" + F.f + "\", sans-serif"; b.style.fontWeight = F.w; b.dataset.f = F.f; b.onclick = () => { lists.style.font = F.f; persist(); renderStyle(); drawView(); }; $("fonts").appendChild(b); });
 COLORS.forEach((C,i) => { const b = document.createElement("button"); b.type = "button"; b.style.background = C.fill; b.setAttribute("aria-label", C.n); b.onclick = () => { color = i; lists.style.color = i; persist(); renderStyle(); drawView(); }; $("colors").appendChild(b); });
-$("ovSize").onchange = $("stSize").onchange = () => persist();
-$("ovSize").oninput = () => { lists.style.size = +$("ovSize").value; $("ovSizeVal").textContent = lists.style.size; drawView(); render(); };
-$("ovSize").onchange = persist;
-$("stSize").oninput = () => { lists.style.stamp = +$("stSize").value; $("stSizeVal").textContent = lists.style.stamp; drawView(); };
-$("stSize").onchange = persist;
+document.querySelectorAll("[data-sz]").forEach(b => b.onclick = () => { const k = b.dataset.sz; lists.style[k] = Math.max(5, Math.min(15, (+lists.style[k] || 10) + +b.dataset.d)); $(k === "size" ? "ovSizeVal" : "stSizeVal").textContent = lists.style[k]; persist(); drawView(); if(k === "size") render(); });
+try { $("styFold").open = localStorage.getItem("tc.styOpen") === "1"; $("styFold").ontoggle = () => localStorage.setItem("tc.styOpen", $("styFold").open ? "1" : "0"); } catch(e) {}
 function renderStyle(){
   [...$("fonts").children].forEach(b => b.classList.toggle("on", b.dataset.f === lists.style.font));
   [...$("colors").children].forEach((b,i) => b.classList.toggle("on", i === color));
   if(lists.style.size < 5 || lists.style.size > 15) lists.style.size = 10;
   if(!(lists.style.stamp >= 5 && lists.style.stamp <= 15)) lists.style.stamp = 10;
-  $("ovSize").value = lists.style.size; $("ovSizeVal").textContent = lists.style.size;
-  $("stSize").value = lists.style.stamp; $("stSizeVal").textContent = lists.style.stamp;
+  $("ovSizeVal").textContent = lists.style.size;
+  $("stSizeVal").textContent = lists.style.stamp;
 }
 renderStyle();
 
@@ -770,8 +774,7 @@ function render(){
   const rt = $("retry"); if(rt) rt.onclick = analyze;
 
   $("strip").textContent = fileName();
-  const FO = $("fnOpts"); FO.innerHTML = "<span>파일 이름에</span>";
-  [["topic","주제"],["label","이름"],["place","장소"],["memo","메모"]].forEach(([k,n]) => FO.appendChild(chip((lists.fn[k] ? "✓ " : "") + n, { on: !!lists.fn[k], onClick: () => { lists.fn[k] = !lists.fn[k]; persist(); render(); } })));
+  { const ts = $("topicSum"); if (ts) ts.textContent = sel.topic || (ai.topic ? "✦ " + ai.topic : "자동"); }
 
   const R = $("recent");
   if(R && lists.recent && lists.recent.length){
