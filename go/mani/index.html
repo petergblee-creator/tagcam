@@ -1,0 +1,15 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>선언문</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#B8892A">
+<style>html,body{height:100%;margin:0}body{background:#B8892A;color:#fff;font-family:system-ui,"Noto Sans KR",sans-serif;display:grid;place-items:center;text-align:center}
+a{display:inline-block;margin-top:18px;background:#fff;color:#B8892A;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:12px;font-size:17px}p{margin:6px 0;opacity:.85}</style></head>
+<body><div><div style="font-size:42px;font-weight:900">선언문</div><p>여는 중…</p><a id="go" href="https://claude.ai/artifact/WnfJ6Xdt9gj5zXz4fC7KdH">선언문 열기</a></div>
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+var U="https://claude.ai/artifact/WnfJ6Xdt9gj5zXz4fC7KdH";
+// 홈 화면 아이콘으로 실행했을 때만 바로 이동(설치 전에는 버튼으로 이동 → 크롬이 설치 안내를 띄울 수 있게)
+var standalone=matchMedia('(display-mode: standalone)').matches;
+if(standalone){location.replace(U);}
+window.addEventListener('pageshow',function(e){if(e.persisted&&standalone)location.replace(U);});
+</script></body></html>
