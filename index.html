@@ -904,7 +904,8 @@ async function shareLast(){
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({ files:[file], title:lastName }); return "보냈습니다"; }catch(e){ return e && e.name === "AbortError" ? "" : "보내지 못했습니다"; } }
   return "이 브라우저는 보내기를 지원하지 않습니다";
 }
-function done(text){
+function done(text){ toast(text.replace("저장했습니다: 다운로드 / ","저장 ✓ "), 1600); show("home"); }  // 저장 뒤 미리보기 화면 없이 바로 카메라로
+function doneOld(text){
   const box = document.createElement("div"); box.className = "done"; box.setAttribute("role","status");
   const img = document.createElement("img"); img.alt = "완성된 사진"; img.src = URL.createObjectURL(lastBlob);
   const p = document.createElement("p"); p.textContent = text;
